@@ -1,0 +1,47 @@
+# Environment Variables
+.env
+.env.local
+.env.production
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Dependencies (handled by subdirectories)
+node_modules/
+__pycache__/
+
+# Build outputs (handled by subdirectories)
+dist/
+build/
+.next/
+out/
+
+# Database
+*.sqlite3
+*.db
+chroma_db/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
