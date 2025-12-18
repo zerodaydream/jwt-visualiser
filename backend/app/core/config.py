@@ -1,14 +1,19 @@
 import os
 from typing import List, Union
-from pydantic import AnyHttpUrl, field_validator, ValidationInfo
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    """
+    Application settings loaded from environment variables.
+    All sensitive values should be set via .env file or environment variables.
+    """
+    
+    # Basic Configuration
     PROJECT_NAME: str = "JWT Visualiser"
     API_V1_STR: str = "/api/v1"
     
     # CORS Configuration
-    # We allow a list of origins for security
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
@@ -17,44 +22,40 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             if not v or v.strip() == "":
                 return []
-            # Handle JSON array format
             if v.startswith("["):
                 import json
                 try:
                     return json.loads(v)
                 except Exception:
                     return []
-            # Handle comma-separated format
             return [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
             return v
         return []
 
-    # LLM Configuration
-
-    LLM_PROVIDER: str = "ollama"  # Options: "ollama", "openai", "gemini", "mock"
-    USE_PAID_LLM: bool = False 
+    # LLM Configuration - ALL VALUES FROM ENV
+    LLM_PROVIDER: str
+    USE_PAID_LLM: bool = False
     OPENAI_API_KEY: str | None = None
     GOOGLE_API_KEY: str | None = None
     GOOGLE_API_KEY_1: str | None = None
     
-
-    # Ollama Configuration (Local LLM)
-    OLLAMA_HOST: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "phi3:3.8b"  # Phi-3 model (3.8GB) - excellent for technical Q&A
-    OLLAMA_NUM_PREDICT: int = 2048  # Max tokens to generate (allows complete responses)
-    OLLAMA_TEMPERATURE: float = 0.3  # Response creativity (0.0-1.0)
-    OLLAMA_NUM_CTX: int = 2048  # Context window size (increased for better context)
+    # Ollama Configuration - ALL VALUES FROM ENV
+    OLLAMA_HOST: str
+    OLLAMA_MODEL: str
+    OLLAMA_NUM_PREDICT: int = 2048
+    OLLAMA_TEMPERATURE: float = 0.3
+    OLLAMA_NUM_CTX: int = 2048
     
-    # Vector DB & RAG Configuration
+    # Vector DB & RAG Configuration - ALL VALUES FROM ENV
     VECTOR_DB_PATH: str = "./chroma_db"
-    ENABLE_RAG: bool = False  # Set to True to enable RAG with embeddings
+    ENABLE_RAG: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env", 
         case_sensitive=True,
         env_file_encoding="utf-8",
-        env_parse_enums=False  # Disable automatic parsing
+        env_parse_enums=False
     )
 
 settings = Settings()

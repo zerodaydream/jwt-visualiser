@@ -36,7 +36,7 @@ RUN pip3 install --no-cache-dir \
     langchain-huggingface==0.0.1 \
     chromadb==0.4.24 \
     tiktoken==0.12.0 \
-    sentence-transformers==2.5.0 \
+    sentence-transformers>=2.6.0 \
     httpx==0.27.0
 
 # Expose the API port
