@@ -31,9 +31,20 @@ class Settings(BaseSettings):
         return []
 
     # LLM Configuration
+
+    LLM_PROVIDER: str = "ollama"  # Options: "ollama", "openai", "gemini", "mock"
+    USE_PAID_LLM: bool = False 
     OPENAI_API_KEY: str | None = None
     GOOGLE_API_KEY: str | None = None
     GOOGLE_API_KEY_1: str | None = None
+    
+
+    # Ollama Configuration (Local LLM)
+    OLLAMA_HOST: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "phi3:3.8b"  # Phi-3 model (3.8GB) - excellent for technical Q&A
+    OLLAMA_NUM_PREDICT: int = 2048  # Max tokens to generate (allows complete responses)
+    OLLAMA_TEMPERATURE: float = 0.3  # Response creativity (0.0-1.0)
+    OLLAMA_NUM_CTX: int = 2048  # Context window size (increased for better context)
     
     # Vector DB & RAG Configuration
     VECTOR_DB_PATH: str = "./chroma_db"

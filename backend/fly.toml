@@ -1,0 +1,51 @@
+# Fly.io deployment configuration for JWT Visualizer API
+# See https://fly.io/docs/reference/configuration/ for info
+
+app = "jwt-visualiser-api"
+primary_region = "sjc"  # San Jose - change to your preferred region
+
+# Kill signal for graceful shutdown
+kill_signal = "SIGINT"
+kill_timeout = 30
+
+[build]
+  # Use the Dockerfile in the current directory
+  dockerfile = "Dockerfile"
+
+[env]
+  # Environment variables
+  LLM_PROVIDER = "ollama"
+  OLLAMA_HOST = "http://localhost:11434"
+  OLLAMA_MODEL = "phi3:3.8b"
+  ENABLE_RAG = "false"
+  ENABLE_QA_LEARNING = "false"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"  # Stop when idle to save resources
+  auto_start_machines = true   # Auto-start when traffic arrives
+  min_machines_running = 0     # Allow scaling to zero for free tier
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "60s"
+    method = "GET"
+    path = "/health"
+
+# Resource allocation
+# For free tier: shared-cpu-1x (256MB RAM)
+# For better performance: shared-cpu-2x (512MB RAM) or performance-1x (2GB RAM)
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 2
+  memory_mb = 4096  # 4GB RAM needed for Ollama + model
+
+# Persistent volume for Ollama models (optional, reduces startup time)
+# Uncomment if you want to persist the model between deployments
+# [[mounts]]
+#   source = "ollama_models"
+#   destination = "/root/.ollama"
+#   initial_size = "5gb"
+

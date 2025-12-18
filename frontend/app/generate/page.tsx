@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { useJwtStore } from '@/store/jwtStore';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, RefreshCw, Check, AlertTriangle, ArrowRight, Settings2, Key, Clock, FileJson, Sparkles, Zap } from 'lucide-react';
+
+import { Copy, RefreshCw, Check, AlertTriangle, ArrowRight, Settings2, Key, Clock, FileJson, Sparkles, Zap, List, Code } from 'lucide-react';
+import { apiRequest } from '@/lib/api';
 
 const ALGOS = ['HS256', 'HS384', 'HS512'];
 
@@ -54,9 +56,12 @@ export default function GeneratePage() {
     setError(null);
 
     try {
-      const res = await fetch('http://localhost:8000/api/v1/generate', {
+
+      // Use AUTO_GENERATE_KEY for empty secrets - backend will handle key generation
+      const secretToUse = secret.trim() || 'AUTO_GENERATE_KEY';
+
+      const data = await apiRequest<any>('/api/v1/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           payload: JSON.parse(payload),
           secret,
@@ -64,8 +69,6 @@ export default function GeneratePage() {
           expires_in_minutes: Number(expiry)
         })
       });
-
-      const data = await res.json();
       
       if (!data.success) {
         throw new Error(data.error || 'Generation failed');
