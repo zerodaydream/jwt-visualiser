@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import ClaudeText from '@/components/features/ClaudeText';
 import SampleTokenHero from '@/components/features/SampleTokenHero'; // Make sure this path matches where you saved it
 import { ShieldAlert } from 'lucide-react';
+import { apiRequest } from '@/lib/api';
 
 export default function DecodePage() {
   const { rawToken, isValidStructure } = useJwtStore();
@@ -24,15 +25,12 @@ export default function DecodePage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('http://localhost:8000/api/v1/decode', {
+        const json = await apiRequest<any>('/api/v1/decode', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: rawToken })
         });
         
-        if (!res.ok) throw new Error('Backend error');
-        
-        const json = await res.json();
+
         if (!json.success) throw new Error(json.error || 'Invalid Token');
         
         setData(json);

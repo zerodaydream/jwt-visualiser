@@ -5,6 +5,7 @@ import { useChatStore } from '@/store/chatStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { Send, Bot, BookOpen, ShieldCheck, Clock, FileJson, Lock, Sparkles, AlertTriangle, Fingerprint, Trash2, AlertCircle } from 'lucide-react';
+import { API_URL, warmupBackend } from '@/lib/api';
 
 // --- ANIMATION COMPONENTS ---
 
@@ -99,7 +100,9 @@ export default function AskPage() {
     setConnectionStatus('connecting');
     
     try {
-      const ws = new WebSocket('ws://localhost:8000/api/v1/ask/ws');
+      // Convert HTTP(S) URL to WS(S) URL
+      const wsUrl = API_URL.replace(/^http/, 'ws') + '/api/v1/ask/ws';
+      const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
         console.log('[WebSocket] Connection established');
@@ -198,7 +201,7 @@ export default function AskPage() {
         const isServerUnavailable = event.code === 1006;
         
         if (isServerUnavailable) {
-          console.warn('[WebSocket] Backend server is not available at ws://localhost:8000');
+          console.warn('[WebSocket] Backend server is not available at', API_URL);
         } else if (!isCleanClose) {
           console.log('[WebSocket] Connection closed:', event.code, event.reason);
         }
@@ -228,6 +231,9 @@ export default function AskPage() {
 
   // Initialize WebSocket connection
   useEffect(() => {
+    // Warm up the backend to reduce cold start delays
+    warmupBackend();
+    
     connectWebSocket();
     
     // Cleanup on unmount
