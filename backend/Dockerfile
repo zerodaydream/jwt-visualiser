@@ -17,27 +17,17 @@ RUN curl -fsSL https://ollama.com/install.sh | sh
 # Set working directory
 WORKDIR /app
 
+# Copy requirements first for better caching
+COPY requirements.txt /app/
+
+# Upgrade pip to avoid dependency resolution bugs
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install Python dependencies from requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
+
 # Copy backend code
 COPY . /app/
-
-# Install Python dependencies
-# Poetry is overkill for deployment - use requirements.txt
-RUN pip3 install --no-cache-dir \
-    fastapi==0.110.0 \
-    uvicorn[standard]==0.27.0 \
-    python-dotenv==1.0.0 \
-    pyjwt==2.8.0 \
-    cryptography==42.0.0 \
-    pydantic==2.6.0 \
-    pydantic-settings==2.2.0 \
-    langchain==0.1.10 \
-    langchain-openai==0.0.8 \
-    langchain-google-genai==0.0.9 \
-    langchain-huggingface==0.0.1 \
-    chromadb==0.4.24 \
-    tiktoken==0.12.0 \
-    sentence-transformers>=2.6.0 \
-    httpx==0.27.0
 
 # Expose the API port
 EXPOSE 8080
