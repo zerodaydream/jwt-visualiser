@@ -58,8 +58,18 @@ class JwtAnalyzer:
                         desc = f"{desc} (EXPIRED at {readable_date})"
                         analysis["status"] = "EXPIRED"
                     else:
-                        remaining = int((value - current_time) / 60)
-                        desc = f"{desc} (Valid until {readable_date}, ~{remaining} mins left)"
+                        remaining_mins = int((value - current_time) / 60)
+                        # Format time remaining
+                        if remaining_mins >= 60:
+                            hours = remaining_mins // 60
+                            mins = remaining_mins % 60
+                            if mins == 0:
+                                time_str = f"{hours}h"
+                            else:
+                                time_str = f"{hours}h {mins}m"
+                        else:
+                            time_str = f"{remaining_mins}m"
+                        desc = f"{desc} (Valid until {readable_date}, ~{time_str} left)"
                 else:
                     desc = f"{desc} ({readable_date})"
             

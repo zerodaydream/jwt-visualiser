@@ -31,13 +31,22 @@ class Settings(BaseSettings):
         return []
 
     # LLM Configuration
+    USE_PAID_LLM: bool = False 
     OPENAI_API_KEY: str | None = None
     GOOGLE_API_KEY: str | None = None
     GOOGLE_API_KEY_1: str | None = None
     
+    # Ollama Configuration (Local LLM)
+    OLLAMA_HOST: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "phi3:3.8b"  # Phi-3 model, excellent for technical Q&A (3-4GB)
+    OLLAMA_NUM_PREDICT: int = 2048  # Max tokens to generate (allows complete responses)
+    OLLAMA_TEMPERATURE: float = 0.3  # Response creativity (0.0-1.0)
+    OLLAMA_NUM_CTX: int = 2048  # Context window size (increased for better context)
+    
     # Vector DB & RAG Configuration
     VECTOR_DB_PATH: str = "./chroma_db"
     ENABLE_RAG: bool = False  # Set to True to enable RAG with embeddings
+    ENABLE_QA_LEARNING: bool = False  # Store Q&A pairs for future retrieval (RAG-based learning)
 
     model_config = SettingsConfigDict(
         env_file=".env", 

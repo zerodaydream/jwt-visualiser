@@ -28,6 +28,7 @@ langchain-huggingface = "^0.0.1"  # Free local embeddings
 chromadb = "^0.4.24"              # Local vector storage
 tiktoken = "^0.12.0"               # Token counting
 sentence-transformers = "^2.5.0"  # Required for HuggingFace embeddings
+httpx = "^0.27.0"                 # For Ollama API communication
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"

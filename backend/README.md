@@ -5,7 +5,8 @@
 ## 🌟 Features
 
 - ✅ **JWT Processing**: Decode, validate, and generate JWTs with multiple algorithms
-- 🤖 **AI Integration**: OpenAI and Google Gemini support
+- 🤖 **AI Integration**: Google Gemini, OpenAI, and **Local Ollama** support (free & private!)
+- 🏠 **Local LLM Option**: Run completely offline with Ollama (no API costs)
 - 📚 **RAG System**: Vector database powered knowledge retrieval
 - 🔄 **WebSocket Support**: Real-time streaming responses
 - 📊 **Comprehensive Analysis**: Security checks, expiration validation, claims extraction
@@ -102,9 +103,21 @@ Create a `.env` file in the backend directory:
 # ======================
 # LLM Configuration
 # ======================
-LLM_PROVIDER=openai  # Options: openai, gemini, mock
+# Set to false to use local Ollama instead of paid APIs (Gemini/OpenAI)
+USE_PAID_LLM=true
+
+# Paid LLM API Keys (only used when USE_PAID_LLM=true)
+GOOGLE_API_KEY=your-google-api-key-here
 OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=...
+
+# ======================
+# Ollama Configuration (Local LLM)
+# ======================
+# Only used when USE_PAID_LLM=false
+# Install Ollama: https://ollama.ai/download
+# Pull model: ollama pull phi3:3.8b
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=phi3:3.8b  # Recommended: phi3:3.8b (best for technical), llama3.2:3b, gemma2:2b
 
 # ======================
 # Server Configuration
@@ -117,12 +130,13 @@ LOG_LEVEL=info
 # ======================
 # CORS Settings
 # ======================
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+BACKEND_CORS_ORIGINS=*  # Or comma-separated: http://localhost:3000,http://localhost:3001
 
 # ======================
-# Vector Database
+# Vector Database & RAG
 # ======================
-CHROMA_PERSIST_DIR=./chroma_db
+VECTOR_DB_PATH=./chroma_db
+ENABLE_RAG=false  # Set to true to enable RAG with embeddings
 EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 
 # ======================
@@ -154,6 +168,17 @@ api_key = settings.openai_api_key
 
 ### Development Mode
 
+**First Time Setup (if using Ollama):**
+
+1. Make sure Ollama is running:
+   ```bash
+   ollama serve
+   ```
+
+2. The backend will automatically download the model on first start!
+
+**Start the server:**
+
 ```bash
 # Using Poetry
 poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -161,6 +186,16 @@ poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 # Using uvicorn directly
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+The startup will show:
+```
+🚀 Starting JWT Visualiser Backend
+🔍 Ollama Startup Health Check
+💻 Apple Silicon (Apple M2) - Metal GPU acceleration enabled
+✅ Model 'phi3:3.8b' is already downloaded
+```
+
+If the model isn't downloaded, it will automatically download it (2-4 minutes).
 
 ### Production Mode
 
@@ -322,42 +357,111 @@ GET /health
 
 ### Supported Providers
 
-#### OpenAI GPT-4
-```python
+#### 🏠 Ollama (Local - Recommended for Free/Private Use)
+```env
 # .env
-LLM_PROVIDER=openai
+USE_PAID_LLM=false
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=llama3.2:3b
+```
+
+**Features:**
+- ✅ **Free**: No API costs
+- ✅ **Private**: Data never leaves your machine
+- ✅ **Offline**: Works without internet
+- ✅ **Fast**: Low latency local inference
+- ✅ **Lightweight**: 3-4GB models available
+
+**Setup:**
+```bash
+# Install Ollama
+brew install ollama  # macOS
+# OR visit https://ollama.ai/download
+
+# Start Ollama server (in a separate terminal)
+ollama serve
+```
+
+**Automatic Model Download:**
+
+The backend will **automatically download** the model on first startup! No manual pulling needed.
+
+Alternatively, you can pre-download manually or use the setup script:
+
+```bash
+# Option 1: Manual download
+ollama pull phi3:3.8b
+
+# Option 2: Use setup script
+cd backend
+python scripts/setup_ollama.py
+```
+
+**Recommended Models:**
+- `phi3:3.8b` - **Best for JWT/technical Q&A** (3-4GB RAM) ⭐
+- `llama3.2:3b` - Faster, general purpose (3-4GB RAM)
+- `gemma2:2b` - Lightweight option (2-3GB RAM)
+
+📖 **[Complete Ollama Setup Guide](./OLLAMA_SETUP.md)**
+
+#### ☁️ Google Gemini (Paid API)
+```env
+# .env
+USE_PAID_LLM=true
+GOOGLE_API_KEY=your-api-key
+```
+
+**Features:**
+- Gemini 2.5 Flash model
+- Streaming responses
+- Fast and cost-effective
+- High-quality responses
+
+#### 🤖 OpenAI GPT (Paid API)
+```env
+# .env
+USE_PAID_LLM=true
 OPENAI_API_KEY=sk-...
 ```
 
 **Features:**
 - GPT-4 Turbo model
-- Streaming responses
 - Function calling support
-- High-quality responses
+- Premium quality responses
 
-#### Google Gemini
-```python
+#### 🧪 Mock Provider (Testing)
+```env
 # .env
-LLM_PROVIDER=gemini
-GOOGLE_API_KEY=...
-```
-
-**Features:**
-- Gemini Pro model
-- Fast responses
-- Cost-effective
-- Good for general queries
-
-#### Mock Provider
-```python
-# .env
-LLM_PROVIDER=mock
+USE_PAID_LLM=true
+# Don't set any API keys
 ```
 
 **Use Cases:**
 - Development without API costs
 - Testing
 - Demo purposes
+
+### Learning from User Interactions
+
+**Important**: Ollama models do NOT automatically train during runtime.
+
+However, you can enable **RAG-based learning** to store Q&A pairs:
+
+```env
+# Enable RAG for knowledge retrieval
+ENABLE_RAG=true
+
+# Enable Q&A storage (learns from interactions)
+ENABLE_QA_LEARNING=true
+```
+
+This provides a form of "learning" where:
+- Every Q&A pair is stored in the vector database
+- Similar past Q&A pairs are retrieved for future questions
+- The system provides more consistent, context-aware responses
+- No model training required - works with any LLM!
+
+📖 **[Complete Learning & Training Guide](./LEARNING_GUIDE.md)**
 
 ### Custom LLM Adapter
 

@@ -5,6 +5,7 @@ from app.jwt.decoder import SafeDecoder
 from app.jwt.analysis import JwtAnalyzer
 from app.vector.chroma_adapter import ChromaAdapter
 from app.llm.factory import LLMFactory
+from app.llm.session_manager import get_session_manager
 from app.api.schemas import AskRequest, AskResponse
 from app.jwt.generator import JwtGenerator
 from app.api.schemas import GenerateRequest, GenerateResponse
@@ -219,27 +220,27 @@ async def generate_token(request: GenerateRequest):
 @router.websocket("/ask/ws")
 async def websocket_ask_endpoint(websocket: WebSocket):
     """
-    Production-ready WebSocket endpoint for real-time JWT Q&A with streaming responses.
+    Production-ready WebSocket endpoint with session-based memory management.
     
     Features:
+    - Session-based conversation memory using LangChain
+    - Automatic memory cleanup on disconnect
     - Full connection lifecycle management
     - Authentication status
     - Token-by-token streaming
     - Detailed error reporting
-    - Connection health monitoring
     
     Message Protocol:
     Client -> Server:
     {
         "type": "ask",
         "token": "jwt_token_string",
-        "question": "user question",
-        "history": [{"role": "user/assistant", "content": "..."}]
+        "question": "user question"
     }
     
     Server -> Client:
     {
-        "type": "connection" | "auth" | "chunk" | "complete" | "error" | "heartbeat",
+        "type": "connection" | "auth" | "chunk" | "complete" | "error" | "session_info",
         "data": {...},
         "timestamp": "ISO timestamp"
     }
@@ -247,13 +248,19 @@ async def websocket_ask_endpoint(websocket: WebSocket):
     client_id = id(websocket)
     await websocket.accept()
     
-    # Send connection established message
+    # Create session for this WebSocket connection
+    session_manager = get_session_manager()
+    session_id = session_manager.create_session(str(client_id))
+    session = session_manager.get_session(session_id)
+    
+    # Send connection established message with session info
     await websocket.send_json({
         "type": "connection",
         "status": "connected",
+        "session_id": session_id,
         "client_id": str(client_id),
         "timestamp": datetime.utcnow().isoformat(),
-        "message": "WebSocket connection established"
+        "message": "WebSocket connection established with session memory"
     })
     
     try:
@@ -290,7 +297,6 @@ async def websocket_ask_endpoint(websocket: WebSocket):
             # Extract request data
             jwt_token = data.get("token")
             question = data.get("question")
-            history = data.get("history", [])
             
             if not jwt_token or not question:
                 await websocket.send_json({
@@ -309,7 +315,7 @@ async def websocket_ask_endpoint(websocket: WebSocket):
                 "timestamp": datetime.utcnow().isoformat()
             })
             
-            # Decode token
+            # Decode token and store in session
             try:
                 decoded = SafeDecoder.decode(jwt_token)
                 token_context = {
@@ -318,10 +324,13 @@ async def websocket_ask_endpoint(websocket: WebSocket):
                     "signature_present": bool(decoded.signature)
                 }
                 
+                # Store JWT context in session
+                session.set_jwt_context(token_context)
+                
                 await websocket.send_json({
                     "type": "auth",
                     "status": "validated",
-                    "message": "Token successfully decoded",
+                    "message": "Token successfully decoded and stored in session",
                     "timestamp": datetime.utcnow().isoformat()
                 })
                 
@@ -353,13 +362,23 @@ async def websocket_ask_endpoint(websocket: WebSocket):
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            # Prepare LLM context
+            # Add user message to session memory
+            session.add_user_message(question)
+            
+            # Prepare LLM context with session-based conversation history
             llm = LLMFactory.get_provider()
             full_context = {
                 "jwt_data": token_context,
                 "knowledge_base": relevant_docs,
-                "conversation_history": history
+                "session_id": session_id
             }
+            
+            # Send session info
+            await websocket.send_json({
+                "type": "session_info",
+                "message_count": len(session.get_messages()),
+                "timestamp": datetime.utcnow().isoformat()
+            })
             
             # Send streaming started
             await websocket.send_json({
@@ -386,12 +405,16 @@ async def websocket_ask_endpoint(websocket: WebSocket):
                             "timestamp": datetime.utcnow().isoformat()
                         })
                 
+                # Add AI response to session memory
+                session.add_ai_message(full_response)
+                
                 # Send completion message
                 await websocket.send_json({
                     "type": "complete",
                     "full_response": full_response,
                     "token_count": token_count,
                     "context_used": relevant_docs,
+                    "session_messages": len(session.get_messages()),
                     "timestamp": datetime.utcnow().isoformat()
                 })
                 
@@ -406,8 +429,14 @@ async def websocket_ask_endpoint(websocket: WebSocket):
                 await websocket.send_json(error_details)
     
     except WebSocketDisconnect:
-        print(f"Client {client_id} disconnected")
+        print(f"[WebSocket] Client {client_id} disconnected")
+        # Clean up session memory on disconnect
+        session_manager.delete_session(session_id)
+        print(f"[WebSocket] Session {session_id} cleaned up")
     except Exception as e:
+        print(f"[WebSocket] Error for client {client_id}: {str(e)}")
+        # Clean up session memory on error
+        session_manager.delete_session(session_id)
         try:
             await websocket.send_json({
                 "type": "error",
