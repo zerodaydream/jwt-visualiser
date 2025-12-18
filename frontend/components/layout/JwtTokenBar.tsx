@@ -2,14 +2,23 @@
 import { useJwtStore } from '@/store/jwtStore';
 import { XCircle, CheckCircle, AlertCircle, Eraser } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRef } from 'react';
 
 export function JwtTokenBar() {
   const { rawToken, setToken, isValidStructure, validationError } = useJwtStore();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const text = e.clipboardData.getData('text');
     setToken(text.replace(/\s/g, ''));
+  };
+
+  const handleScroll = () => {
+    if (textareaRef.current && overlayRef.current) {
+      overlayRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
   };
 
   const parts = rawToken.split('.');
@@ -27,8 +36,12 @@ export function JwtTokenBar() {
                     : 'border-claude-border focus-within:border-claude-subtext'
         }`}>
           
-          {/* Overlay for coloring */}
-          <div className="absolute inset-0 p-4 font-mono text-sm break-all pointer-events-none whitespace-pre-wrap leading-relaxed z-0" aria-hidden="true">
+          {/* Overlay for coloring - syncs with textarea scroll */}
+          <div 
+            ref={overlayRef}
+            className="absolute inset-0 p-4 pr-24 font-mono text-sm break-all pointer-events-none whitespace-pre-wrap leading-relaxed z-0 overflow-hidden" 
+            aria-hidden="true"
+          >
             {parts[0] ? <span className="text-jwt-header opacity-100">{parts[0]}</span> : <span className="text-gray-600 opacity-40">eyJ... (Header)</span>}
             {parts[0] && <span className="text-gray-500">.</span>}
             {parts[1] && <span className="text-jwt-payload opacity-100">{parts[1]}</span>}
@@ -36,14 +49,19 @@ export function JwtTokenBar() {
             {parts[2] && <span className="text-jwt-signature opacity-100">{parts[2]}</span>}
           </div>
 
-          {/* Actual Input */}
+          {/* Actual Input - with vertical scroll */}
           <textarea 
+            ref={textareaRef}
             value={rawToken}
             onChange={(e) => setToken(e.target.value.replace(/\s/g, ''))}
             onPaste={handlePaste}
-            className="w-full bg-transparent text-transparent caret-claude-text p-4 font-mono text-sm resize-none focus:outline-none min-h-[80px] leading-relaxed relative z-10"
+            onScroll={handleScroll}
+            placeholder="Paste your JWT token here..."
+            className="w-full bg-transparent text-transparent caret-claude-text p-4 pr-24 font-mono text-sm resize-none focus:outline-none min-h-[80px] max-h-[120px] leading-relaxed relative z-10 overflow-y-auto scrollbar-thin scrollbar-thumb-claude-border scrollbar-track-transparent"
             spellCheck={false}
           />
+          
+          
           
           {/* STATUS ICONS (Absolute Top Right) */}
           <div className="absolute top-3 right-3 z-20 flex gap-2">

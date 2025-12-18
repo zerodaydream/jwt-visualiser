@@ -61,19 +61,9 @@ export default function AskPage() {
     }
   }, []);
 
-  // Start controlled character-by-character display from buffer
+  // Instant display from buffer - no delays
   const startCharDisplay = useCallback(() => {
-    // Clear any existing interval
-    if (displayIntervalRef.current) {
-      clearInterval(displayIntervalRef.current);
-    }
-
-    displayIntervalRef.current = setInterval(() => {
-      if (charBufferRef.current.length > 0) {
-        const char = charBufferRef.current.shift()!;
-        setStreamingMessage(prev => prev + char);
-      }
-    }, CHAR_DISPLAY_DELAY);
+    // No interval needed - we'll display chunks instantly
   }, []);
 
   // Stop character display and clear buffer
@@ -138,9 +128,8 @@ export default function AskPage() {
               break;
             
             case 'chunk':
-              // Split chunk into individual characters for true typing effect
-              const chars = message.content.split('');
-              charBufferRef.current.push(...chars);
+              // Display chunks instantly - no typing effect delay
+              setStreamingMessage(prev => prev + message.content);
               setTokenCount(message.token_number);
               break;
             
@@ -148,18 +137,16 @@ export default function AskPage() {
               // Stop display interval and flush buffer
               stopCharDisplay();
               
-              // Small delay to ensure final chunks are visible
-              setTimeout(() => {
-                setIsStreaming(false);
-                setStreamingMessage('');
-                setTokenCount(0);
-                addMessage({
-                  role: 'assistant',
-                  content: message.full_response,
-                  sources: message.context_used
-                });
-                setAuthStatus('idle');
-              }, 100);
+              // Instantly complete - no delay
+              setIsStreaming(false);
+              setStreamingMessage('');
+              setTokenCount(0);
+              addMessage({
+                role: 'assistant',
+                content: message.full_response,
+                sources: message.context_used
+              });
+              setAuthStatus('idle');
               break;
             
             case 'error':
@@ -300,27 +287,14 @@ Try asking:
     }
 
     try {
-      // Cinematic animation
-      await new Promise(r => setTimeout(r, 2000)); 
-      setCinematicState('payload');
-      await new Promise(r => setTimeout(r, 2000)); 
-      setCinematicState('signature');
-      await new Promise(r => setTimeout(r, 2000)); 
-      setCinematicState('shrinking');
-      await new Promise(r => setTimeout(r, 800));  
+      // Skip cinematic animation - go straight to docked
       setCinematicState('docked');                 
 
-      // Prepare conversation history
-      const conversationHistory = messages
-        .filter(msg => msg.role === 'user' || msg.role === 'assistant')
-        .map(msg => ({ role: msg.role, content: msg.content }));
-
-      // Send question via WebSocket
+      // Send question via WebSocket (history is managed by backend session)
       wsRef.current.send(JSON.stringify({
         type: 'ask',
         token: rawToken,
-        question: question,
-        history: conversationHistory
+        question: question
       }));
 
       console.log('[WebSocket] Question sent:', question);
@@ -578,7 +552,7 @@ Try asking:
                     {streamingMessage}
                   </ReactMarkdown>
                 ) : (
-                  <span className="text-claude-subtext text-sm">Thinking...</span>
+                  <span className="text-claude-subtext text-sm"></span>
                 )}
                 {/* Streaming cursor */}
                 <span className="inline-block w-2 h-4 align-middle bg-claude-accent ml-1 animate-pulse" />

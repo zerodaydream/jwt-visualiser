@@ -45,8 +45,8 @@ export default function DecodePage() {
       }
     };
     
-    // Debounce/Delay slightly for UX smoothing
-    const timer = setTimeout(fetchData, 600);
+    // Minimal debounce to avoid rapid-fire requests
+    const timer = setTimeout(fetchData, 50);
     return () => clearTimeout(timer);
   }, [rawToken, isValidStructure]);
 
