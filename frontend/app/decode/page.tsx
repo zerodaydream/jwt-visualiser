@@ -30,7 +30,7 @@ export default function DecodePage() {
             body: JSON.stringify({ token: rawToken })
         });
         
-        if (!res.ok) throw new Error('Backend error');
+        if (!res.ok) throw new Error('Service error');
         
         const json = await res.json();
         if (!json.success) throw new Error(json.error || 'Invalid Token');
@@ -128,7 +128,7 @@ export default function DecodePage() {
             </section>
 
             {/* 3. Signature (Static/Simple) */}
-            <section className="opacity-60 hover:opacity-100 transition-opacity">
+            <section>
                 <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs font-mono text-jwt-signature border border-jwt-signature px-2 py-0.5 rounded-full">SIGNATURE</span>
                 </div>
