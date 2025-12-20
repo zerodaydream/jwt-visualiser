@@ -266,6 +266,18 @@ export default function AskPage() {
               }
               break;
             
+            case 'rate_limit':
+              // Emit custom event to update rate limit indicator
+              window.dispatchEvent(new CustomEvent('rate-limit-update', {
+                detail: {
+                  requests_remaining: message.requests_remaining,
+                  requests_limit: message.requests_limit,
+                  reset_time: message.reset_time
+                }
+              }));
+              console.log('[WebSocket] Rate limit:', message.requests_remaining, '/', message.requests_limit);
+              break;
+            
             case 'rag':
               console.log('[WebSocket] RAG status:', message.status, message.doc_count || 0, 'docs');
               break;

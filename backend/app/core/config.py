@@ -34,11 +34,21 @@ class Settings(BaseSettings):
         return []
 
     # LLM Configuration - with defaults and ENV override support
-    LLM_PROVIDER: str = "ollama"
+    LLM_PROVIDER: str = "groq"  # Options: "ollama", "gemini", "groq", "openai"
     USE_PAID_LLM: bool = False
-    OPENAI_API_KEY: str | None = None
+    
+    # Groq Configuration (Fast & Free API)
+    GROQ_API_KEY: str | None = None
+    GROQ_MODEL: str = "llama-3.1-8b-instant"  # Ultra-fast, great for chat
+    GROQ_TEMPERATURE: float = 0.3  # Response creativity (0.0-1.0)
+    GROQ_MAX_TOKENS: int = 2048  # Maximum tokens to generate
+    
+    # Gemini Configuration
     GOOGLE_API_KEY: str | None = None
     GOOGLE_API_KEY_1: str | None = None
+    
+    # OpenAI Configuration
+    OPENAI_API_KEY: str | None = None
     
     # Ollama Configuration (Local LLM) - with defaults and ENV override support
     OLLAMA_HOST: str = "http://localhost:11434"

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes
 from app.core.config import settings
 from app.llm.session_manager import get_session_manager
+from app.middleware.rate_limiter import get_rate_limiter
 import asyncio
 import httpx
 from contextlib import asynccontextmanager
@@ -13,8 +14,14 @@ async def warmup_llm():
     Warm up the LLM model by sending a simple test query.
     This loads the model into memory and reduces first-query latency.
     """
+    # Skip warmup if using paid LLMs (Gemini/Groq) - they're always ready
+    if settings.USE_PAID_LLM:
+        print(f"[Warmup] Skipping warmup (using paid LLM: {settings.LLM_PROVIDER})")
+        return
+    
+    # Skip warmup if not using Ollama
     if settings.LLM_PROVIDER != "ollama":
-        print("[Warmup] Skipping LLM warmup (not using Ollama)")
+        print(f"[Warmup] Skipping warmup (using: {settings.LLM_PROVIDER})")
         return
     
     try:
@@ -110,12 +117,20 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     session_manager = get_session_manager()
+    rate_limiter = get_rate_limiter()
     return {
         "status": "healthy",
         "llm_provider": settings.LLM_PROVIDER,
         "rag_enabled": settings.ENABLE_RAG,
-        "active_sessions": session_manager.get_active_session_count()
+        "active_sessions": session_manager.get_active_session_count(),
+        "rate_limit_stats": rate_limiter.get_stats()
     }
+
+@app.get("/api/v1/rate-limit/stats")
+async def get_rate_limit_stats():
+    """Get current rate limiter statistics (admin/monitoring endpoint)."""
+    rate_limiter = get_rate_limiter()
+    return rate_limiter.get_stats()
 
 @app.get("/api/v1/sessions/info")
 async def get_sessions_info():

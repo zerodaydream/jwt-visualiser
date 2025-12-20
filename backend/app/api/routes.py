@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import StreamingResponse
 from app.api.schemas import TokenRequest, TokenResponse, AnalysisResult
 from app.jwt.decoder import SafeDecoder
@@ -6,6 +6,7 @@ from app.jwt.analysis import JwtAnalyzer
 from app.vector.chroma_adapter import ChromaAdapter
 from app.llm.factory import LLMFactory
 from app.llm.session_manager import get_session_manager
+from app.middleware.rate_limiter import get_rate_limiter
 from app.api.schemas import AskRequest, AskResponse
 from app.jwt.generator import JwtGenerator
 from app.api.schemas import GenerateRequest, GenerateResponse
@@ -220,10 +221,11 @@ async def generate_token(request: GenerateRequest):
 @router.websocket("/ask/ws")
 async def websocket_ask_endpoint(websocket: WebSocket):
     """
-    Production-ready WebSocket endpoint with session-based memory management.
+    Production-ready WebSocket endpoint with session-based memory management and rate limiting.
     
     Features:
     - Session-based conversation memory using LangChain
+    - Per-user rate limiting (10 requests/day per IP)
     - Automatic memory cleanup on disconnect
     - Full connection lifecycle management
     - Authentication status
@@ -240,7 +242,7 @@ async def websocket_ask_endpoint(websocket: WebSocket):
     
     Server -> Client:
     {
-        "type": "connection" | "auth" | "chunk" | "complete" | "error" | "session_info",
+        "type": "connection" | "auth" | "chunk" | "complete" | "error" | "session_info" | "rate_limit",
         "data": {...},
         "timestamp": "ISO timestamp"
     }
@@ -252,6 +254,9 @@ async def websocket_ask_endpoint(websocket: WebSocket):
     session_manager = get_session_manager()
     session_id = session_manager.create_session(str(client_id))
     session = session_manager.get_session(session_id)
+    
+    # Get rate limiter
+    rate_limiter = get_rate_limiter()
     
     # Send connection established message with session info
     await websocket.send_json({
@@ -306,6 +311,53 @@ async def websocket_ask_endpoint(websocket: WebSocket):
                     "timestamp": datetime.utcnow().isoformat()
                 })
                 continue
+            
+            # CHECK RATE LIMIT BEFORE PROCESSING
+            try:
+                # Create a proper mock Request for rate limiting using WebSocket client info
+                client_host = websocket.client.host if websocket.client else "unknown"
+                
+                # Create a simple scope that works with rate limiter
+                mock_scope = {
+                    "type": "http",  # Rate limiter expects HTTP type
+                    "client": (client_host, 0),
+                    "headers": [
+                        (b"x-real-ip", client_host.encode()),
+                        (b"x-forwarded-for", client_host.encode())
+                    ]
+                }
+                
+                # Import Request here to avoid circular imports
+                from starlette.requests import Request as StarletteRequest
+                mock_request = StarletteRequest(mock_scope)
+                
+                # Check rate limit
+                rate_info = await rate_limiter.check_rate_limit(mock_request, session_id)
+                
+                # Send rate limit info to client
+                await websocket.send_json({
+                    "type": "rate_limit",
+                    "requests_remaining": rate_info["ip_requests_remaining"],
+                    "requests_limit": rate_info["ip_requests_limit"],
+                    "reset_time": rate_info["reset_time"],
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+                
+            except HTTPException as rate_error:
+                # Rate limit exceeded
+                await websocket.send_json({
+                    "type": "error",
+                    "error": "rate_limit_exceeded",
+                    "message": rate_error.detail["message"],
+                    "retry_after": rate_error.detail["retry_after"],
+                    "requests_limit": rate_error.detail.get("requests_limit"),
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+                continue
+            except Exception as e:
+                # Log rate limit check error but don't block the request
+                print(f"[WebSocket] Rate limit check error: {e}")
+                # Continue with the request even if rate limit check fails
             
             # Send authentication status
             await websocket.send_json({

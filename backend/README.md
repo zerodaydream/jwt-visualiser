@@ -1,31 +1,68 @@
 # 🔐 JWT Visualiser Backend
 
-> FastAPI-based backend service providing JWT analysis, generation, and AI-powered insights with RAG (Retrieval-Augmented Generation) capabilities.
+<div align="center">
+
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Poetry](https://img.shields.io/badge/Poetry-Dependency%20Management-blueviolet)](https://python-poetry.org/)
+
+**Production-ready FastAPI backend for JWT analysis, generation, and AI-powered security insights**
+
+[Features](#-features) • [Quick Start](#-quick-start) • [API Documentation](#-api-documentation) • [Deployment](#-deployment) • [Contributing](#-contributing)
+
+</div>
+
+---
+
+## 📖 Overview
+
+The JWT Visualiser Backend is a high-performance, async FastAPI application that provides comprehensive JWT processing capabilities with AI-powered analysis. It supports multiple LLM providers (Gemini, OpenAI, Ollama), implements RAG (Retrieval-Augmented Generation) for contextual responses, and includes production-grade features like rate limiting, session management, and WebSocket support.
+
+### Key Capabilities
+
+- **JWT Operations**: Decode, validate, and generate JWTs with 14+ cryptographic algorithms
+- **AI Integration**: Multi-provider LLM support with streaming responses
+- **Rate Limiting**: IP-based and session-based request throttling to protect API quotas
+- **RAG System**: Vector database powered knowledge retrieval using ChromaDB
+- **Real-time Communication**: WebSocket support for streaming AI responses
+- **Production Ready**: Comprehensive error handling, logging, and monitoring
+
+---
 
 ## 🌟 Features
 
-- ✅ **JWT Processing**: Decode, validate, and generate JWTs with multiple algorithms
-- 🤖 **AI Integration**: Google Gemini, OpenAI, and **Local Ollama** support (free & private!)
-- 🏠 **Local LLM Option**: Run completely offline with Ollama (no API costs)
-- 📚 **RAG System**: Vector database powered knowledge retrieval
-- 🔄 **WebSocket Support**: Real-time streaming responses
-- 📊 **Comprehensive Analysis**: Security checks, expiration validation, claims extraction
-- 🚀 **High Performance**: Async/await architecture with Uvicorn
-- 📝 **Auto Documentation**: Interactive API docs with Swagger UI
-- 🛡️ **Type Safety**: Pydantic models for request/response validation
+### Core Functionality
 
-## 📋 Table of Contents
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **JWT Decoding** | Base64URL decoding with structure validation | ✅ Production |
+| **JWT Generation** | Support for HS*, RS*, ES*, PS*, EdDSA algorithms | ✅ Production |
+| **Security Analysis** | Automated vulnerability detection and recommendations | ✅ Production |
+| **Claims Extraction** | Parse and explain standard & custom JWT claims | ✅ Production |
 
-- [Architecture](#architecture)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Running the Application](#running-the-application)
-- [API Endpoints](#api-endpoints)
-- [LLM Integration](#llm-integration)
-- [Database](#database)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Troubleshooting](#troubleshooting)
+### AI & Intelligence
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Multi-LLM Support** | Gemini, OpenAI, Ollama (local) | ✅ Production |
+| **Streaming Responses** | Server-Sent Events & WebSocket streaming | ✅ Production |
+| **Session Memory** | Conversation history with LangChain integration | ✅ Production |
+| **RAG System** | ChromaDB vector store with embeddings | ✅ Production |
+| **Q&A Learning** | Store successful interactions for future retrieval | ✅ Production |
+
+### Production Features
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Rate Limiting** | IP + Session + Global limits (10/15/45 req/day) | ✅ Production |
+| **Auto Documentation** | Interactive Swagger UI & ReDoc | ✅ Production |
+| **CORS Support** | Configurable cross-origin resource sharing | ✅ Production |
+| **Health Checks** | Monitoring endpoints with detailed metrics | ✅ Production |
+| **Error Handling** | Structured error responses with logging | ✅ Production |
+| **Type Safety** | Pydantic models for validation | ✅ Production |
+
+---
 
 ## 🏗️ Architecture
 
@@ -33,45 +70,82 @@
 backend/
 ├── app/
 │   ├── api/
-│   │   ├── routes.py       # API endpoints
-│   │   └── schemas.py      # Pydantic models
+│   │   ├── routes.py              # API endpoints (decode, generate, chat)
+│   │   └── schemas.py             # Pydantic models & validation
+│   │
 │   ├── core/
-│   │   └── config.py       # Configuration management
+│   │   └── config.py              # Settings & environment configuration
+│   │
 │   ├── jwt/
-│   │   ├── analysis.py     # JWT analysis logic
-│   │   ├── decoder.py      # Token decoding
-│   │   └── generator.py    # Token generation
+│   │   ├── analysis.py            # Security analysis & claims extraction
+│   │   ├── decoder.py             # Safe JWT decoding
+│   │   └── generator.py           # Token generation with multiple algorithms
+│   │
 │   ├── llm/
-│   │   ├── base.py         # LLM interface
-│   │   ├── factory.py      # LLM provider factory
-│   │   ├── openai_adapter.py   # OpenAI integration
-│   │   ├── gemini_adapter.py   # Google Gemini integration
-│   │   └── mock_adapter.py     # Mock for testing
+│   │   ├── base.py                # LLM provider interface
+│   │   ├── factory.py             # Provider selection logic
+│   │   ├── gemini_adapter.py      # Google Gemini integration
+│   │   ├── openai_adapter.py      # OpenAI GPT integration
+│   │   ├── ollama_adapter.py      # Local Ollama integration
+│   │   ├── session_manager.py     # Conversation memory management
+│   │   └── mock_adapter.py        # Testing mock
+│   │
+│   ├── middleware/
+│   │   └── rate_limiter.py        # Rate limiting implementation
+│   │
 │   ├── vector/
-│   │   ├── base.py         # Vector DB interface
-│   │   └── chroma_adapter.py   # ChromaDB implementation
-│   └── main.py            # FastAPI application
-├── chroma_db/             # Vector database storage
-├── pyproject.toml         # Poetry dependencies
-└── README.md
+│   │   ├── base.py                # Vector DB interface
+│   │   ├── chroma_adapter.py      # ChromaDB implementation
+│   │   └── qa_store.py            # Q&A knowledge store
+│   │
+│   └── main.py                    # FastAPI application & lifecycle
+│
+├── chroma_db/                     # Vector database storage (gitignored)
+├── scripts/
+│   └── setup_ollama.py            # Ollama installation helper
+├── pyproject.toml                 # Poetry dependencies
+├── requirements.txt               # Pip dependencies (generated)
+├── .env.example                   # Environment variables template
+└── README.md                      # This file
 ```
+
+### Request Flow
+
+```mermaid
+graph LR
+    A[Client] -->|HTTP/WS| B[FastAPI]
+    B --> C{Rate Limiter}
+    C -->|Allowed| D[Route Handler]
+    C -->|Blocked| E[429 Error]
+    D --> F{Endpoint}
+    F -->|/decode| G[JWT Decoder]
+    F -->|/generate| H[JWT Generator]
+    F -->|/ask| I[LLM Factory]
+    I --> J[Session Manager]
+    J --> K[LLM Adapter]
+    K -->|Streaming| L[WebSocket Response]
+    K -->|Standard| M[JSON Response]
+```
+
+---
 
 ## 📦 Installation
 
 ### Prerequisites
 
-- Python 3.11 or higher
-- Poetry (recommended) or pip
-- Virtual environment (recommended)
+- **Python**: 3.11 or higher
+- **Poetry**: Recommended for dependency management
+- **Ollama** (optional): For local LLM inference
 
 ### Using Poetry (Recommended)
 
 ```bash
-# Install Poetry if not already installed
+# Install Poetry
 curl -sSL https://install.python-poetry.org | python3 -
 
-# Navigate to backend directory
-cd backend
+# Clone repository
+git clone https://github.com/yourusername/jwt-visualiser.git
+cd jwt-visualiser/backend
 
 # Install dependencies
 poetry install
@@ -84,14 +158,24 @@ poetry shell
 
 ```bash
 # Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt  # If you have requirements.txt
-# OR
-pip install fastapi uvicorn pyjwt cryptography pydantic langchain chromadb
+pip install -r requirements.txt
 ```
+
+### Optional: Install Ollama (Local LLM)
+
+```bash
+# macOS/Linux
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull recommended model
+ollama pull phi3:3.8b
+```
+
+---
 
 ## ⚙️ Configuration
 
@@ -99,139 +183,142 @@ pip install fastapi uvicorn pyjwt cryptography pydantic langchain chromadb
 
 Create a `.env` file in the backend directory:
 
-```env
-# ======================
-# LLM Configuration
-# ======================
-# Set to false to use local Ollama instead of paid APIs (Gemini/OpenAI)
+```bash
+# ===================================
+# LLM PROVIDER CONFIGURATION
+# ===================================
+
+# LLM Provider: "ollama" (local), "gemini", or "openai"
+LLM_PROVIDER=gemini
+
+# Use paid LLM services (true) or local Ollama (false)
 USE_PAID_LLM=true
 
-# Paid LLM API Keys (only used when USE_PAID_LLM=true)
-GOOGLE_API_KEY=your-google-api-key-here
-OPENAI_API_KEY=sk-...
+# ===================================
+# API KEYS
+# ===================================
 
-# ======================
-# Ollama Configuration (Local LLM)
-# ======================
-# Only used when USE_PAID_LLM=false
-# Install Ollama: https://ollama.ai/download
-# Pull model: ollama pull phi3:3.8b
+# Google Gemini API Key (get from: https://makersuite.google.com/app/apikey)
+GOOGLE_API_KEY=your_gemini_api_key_here
+
+# OpenAI API Key (optional)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# ===================================
+# OLLAMA CONFIGURATION (Local LLM)
+# ===================================
+
+# Ollama Server URL
 OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=phi3:3.8b  # Recommended: phi3:3.8b (best for technical), llama3.2:3b, gemma2:2b
 
-# ======================
-# Server Configuration
-# ======================
-HOST=0.0.0.0
-PORT=8000
-RELOAD=true
-LOG_LEVEL=info
+# Ollama Model (phi3:3.8b recommended for JWT analysis)
+OLLAMA_MODEL=phi3:3.8b
 
-# ======================
-# CORS Settings
-# ======================
-BACKEND_CORS_ORIGINS=*  # Or comma-separated: http://localhost:3000,http://localhost:3001
+# Max tokens to generate
+OLLAMA_NUM_PREDICT=2048
 
-# ======================
-# Vector Database & RAG
-# ======================
+# Response creativity (0.0-1.0)
+OLLAMA_TEMPERATURE=0.3
+
+# Context window size
+OLLAMA_NUM_CTX=2048
+
+# ===================================
+# VECTOR DATABASE & RAG
+# ===================================
+
+# ChromaDB storage path
 VECTOR_DB_PATH=./chroma_db
-ENABLE_RAG=false  # Set to true to enable RAG with embeddings
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 
-# ======================
-# JWT Configuration
-# ======================
-DEFAULT_JWT_SECRET=your-secret-key-here
-DEFAULT_ALGORITHM=HS256
+# Enable RAG (Retrieval-Augmented Generation)
+ENABLE_RAG=false
 
-# ======================
-# RAG Configuration
-# ======================
-CHUNK_SIZE=500
-CHUNK_OVERLAP=50
-TOP_K_RESULTS=5
+# Store Q&A pairs for learning
+ENABLE_QA_LEARNING=false
+
+# ===================================
+# CORS CONFIGURATION
+# ===================================
+
+# Allowed origins (comma-separated or "*" for all)
+BACKEND_CORS_ORIGINS=*
 ```
 
-### Configuration Class
+### Configuration Options
 
-The `app/core/config.py` module handles all configuration:
+#### LLM Provider Selection
+
+| Environment | LLM_PROVIDER | USE_PAID_LLM | Best For |
+|-------------|--------------|--------------|----------|
+| **Local Development** | `ollama` | `false` | Privacy, no API costs |
+| **Production (Low Traffic)** | `gemini` | `true` | Free tier, 50 req/day |
+| **Production (High Traffic)** | `openai` | `true` | Enterprise, reliable |
+
+#### Rate Limiting Configuration
+
+Edit `app/middleware/rate_limiter.py` to adjust limits:
 
 ```python
-from app.core.config import get_settings
-
-settings = get_settings()
-api_key = settings.openai_api_key
+RateLimiter(
+    requests_per_ip_per_day=10,      # Per IP address
+    requests_per_session_per_day=15,  # Per session
+    global_requests_per_day=45        # Total across all users
+)
 ```
+
+---
 
 ## 🚀 Running the Application
 
 ### Development Mode
 
-**First Time Setup (if using Ollama):**
-
-1. Make sure Ollama is running:
-   ```bash
-   ollama serve
-   ```
-
-2. The backend will automatically download the model on first start!
-
-**Start the server:**
-
 ```bash
-# Using Poetry
-poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Start server with hot-reload
+poetry run uvicorn app.main:app --reload
 
-# Using uvicorn directly
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Or with custom host/port
+poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The startup will show:
-```
-🚀 Starting JWT Visualiser Backend
-🔍 Ollama Startup Health Check
-💻 Apple Silicon (Apple M2) - Metal GPU acceleration enabled
-✅ Model 'phi3:3.8b' is already downloaded
-```
-
-If the model isn't downloaded, it will automatically download it (2-4 minutes).
+Server will start at: `http://localhost:8000`
 
 ### Production Mode
 
 ```bash
-# Single worker
-poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-# Multiple workers (recommended)
-poetry run gunicorn app.main:app \
-    -w 4 \
-    -k uvicorn.workers.UvicornWorker \
-    --bind 0.0.0.0:8000
+# Run with Gunicorn + Uvicorn workers
+gunicorn app.main:app \
+  --workers 4 \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --bind 0.0.0.0:8000 \
+  --timeout 120
 ```
 
 ### Docker
 
 ```bash
 # Build image
-docker build -t jwt-backend .
+docker build -t jwt-visualiser-backend .
 
 # Run container
-docker run -p 8000:8000 --env-file .env jwt-backend
+docker run -p 8000:8000 --env-file .env jwt-visualiser-backend
 ```
 
-### Access Points
+---
 
-- **Application**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
+## 📚 API Documentation
+
+### Interactive Documentation
+
+Once the server is running:
+
+- **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
+- **OpenAPI JSON**: http://localhost:8000/openapi.json
 
-## 📡 API Endpoints
+### Core Endpoints
 
-### JWT Operations
+#### JWT Decoding
 
-#### Decode JWT
 ```http
 POST /api/v1/decode
 Content-Type: application/json
@@ -244,240 +331,284 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-  "header": {"alg": "HS256", "typ": "JWT"},
-  "payload": {"sub": "1234567890", "name": "John Doe"},
+  "success": true,
+  "header": {
+    "alg": "HS256",
+    "typ": "JWT"
+  },
+  "payload": {
+    "sub": "1234567890",
+    "name": "John Doe",
+    "iat": 1516239022
+  },
   "signature": "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
-  "is_valid": true,
-  "algorithm": "HS256",
-  "issued_at": "2024-01-01T00:00:00Z"
+  "analysis": {
+    "header_explanation": "...",
+    "claims_explanation": [...]
+  }
 }
 ```
 
-#### Generate JWT
+#### JWT Generation
+
 ```http
 POST /api/v1/generate
 Content-Type: application/json
 
 {
   "payload": {
-    "sub": "1234567890",
-    "name": "John Doe",
-    "admin": true
+    "sub": "user123",
+    "name": "Jane Doe",
+    "role": "admin"
   },
-  "secret": "your-secret-key",
   "algorithm": "HS256",
-  "expires_in": 3600
+  "secret": "your-256-bit-secret",
+  "expires_in_minutes": 60
 }
 ```
 
-#### Analyze JWT
-```http
-POST /api/v1/analyze
-Content-Type: application/json
+**Supported Algorithms:**
+- `HS256`, `HS384`, `HS512` (HMAC)
+- `RS256`, `RS384`, `RS512` (RSA)
+- `ES256`, `ES384`, `ES512` (ECDSA)
+- `PS256`, `PS384`, `PS512` (RSA-PSS)
+- `EdDSA` (Ed25519)
 
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
+#### AI Chat (WebSocket)
+
+```javascript
+const ws = new WebSocket('ws://localhost:8000/api/v1/ask/ws');
+
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    type: 'ask',
+    token: 'your.jwt.token',
+    question: 'What security issues does this token have?'
+  }));
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log(data.type); // 'chunk', 'complete', 'rate_limit', 'error'
+};
+```
+
+#### Health & Monitoring
+
+```http
+GET /health
 ```
 
 **Response:**
 ```json
 {
-  "structure": {
-    "is_valid": true,
-    "parts": 3,
-    "header_valid": true,
-    "payload_valid": true
-  },
-  "security": {
-    "algorithm": "HS256",
-    "is_expired": false,
-    "has_nbf": false,
-    "has_exp": true
-  },
-  "claims": {
-    "sub": "1234567890",
-    "name": "John Doe",
-    "iat": 1516239022,
-    "exp": 1516242622
-  },
-  "recommendations": [
-    "Consider using RS256 for better security",
-    "Add 'nbf' claim for activation time"
-  ]
+  "status": "healthy",
+  "llm_provider": "gemini",
+  "rag_enabled": false,
+  "active_sessions": 3,
+  "rate_limit_stats": {
+    "total_ips_tracked": 15,
+    "global_requests_today": 42,
+    "global_limit": 45,
+    "reset_in_seconds": 18420
+  }
 }
 ```
 
-### AI Chat (WebSocket)
+---
 
-```javascript
-// Connect to WebSocket
-const ws = new WebSocket('ws://localhost:8000/api/v1/ask/ws');
+## 🛡️ Rate Limiting
 
-// Send query
-ws.send(JSON.stringify({
-  type: 'query',
-  message: 'What is a JWT?',
-  token: 'optional-jwt-token-for-context'
-}));
+### How It Works
 
-// Receive streaming response
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log(data.type, data.content);
-};
-```
+The backend implements a **three-tier rate limiting** strategy:
 
-**Message Types:**
-- `connection`: Initial connection confirmation
-- `auth`: Token validation status
-- `rag`: Document retrieval status
-- `stream_start`: Response streaming begins
-- `chunk`: Character chunks
-- `complete`: Response finished
-- `error`: Error occurred
+1. **Per IP Address**: 10 requests/day
+2. **Per Session**: 15 requests/day
+3. **Global Limit**: 45 requests/day (protects free-tier API quota)
 
-### Health & Status
+### Rate Limit Response
 
-#### Health Check
-```http
-GET /health
-```
+When exceeded:
 
 ```json
 {
-  "status": "healthy",
-  "version": "1.0.0",
-  "llm_provider": "openai",
-  "vector_db": "chromadb"
+  "error": "Rate limit exceeded",
+  "message": "You have reached your daily limit of 10 requests. Please try again tomorrow.",
+  "requests_made": 10,
+  "requests_limit": 10,
+  "retry_after": 43200,
+  "limit_type": "ip"
 }
 ```
 
-## 🤖 LLM Integration
-
-### Supported Providers
-
-#### 🏠 Ollama (Local - Recommended for Free/Private Use)
-```env
-# .env
-USE_PAID_LLM=false
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=llama3.2:3b
-```
-
-**Features:**
-- ✅ **Free**: No API costs
-- ✅ **Private**: Data never leaves your machine
-- ✅ **Offline**: Works without internet
-- ✅ **Fast**: Low latency local inference
-- ✅ **Lightweight**: 3-4GB models available
-
-**Setup:**
-```bash
-# Install Ollama
-brew install ollama  # macOS
-# OR visit https://ollama.ai/download
-
-# Start Ollama server (in a separate terminal)
-ollama serve
-```
-
-**Automatic Model Download:**
-
-The backend will **automatically download** the model on first startup! No manual pulling needed.
-
-Alternatively, you can pre-download manually or use the setup script:
+### Monitoring
 
 ```bash
-# Option 1: Manual download
-ollama pull phi3:3.8b
-
-# Option 2: Use setup script
-cd backend
-python scripts/setup_ollama.py
+# Check rate limit statistics
+curl http://localhost:8000/api/v1/rate-limit/stats
 ```
 
-**Recommended Models:**
-- `phi3:3.8b` - **Best for JWT/technical Q&A** (3-4GB RAM) ⭐
-- `llama3.2:3b` - Faster, general purpose (3-4GB RAM)
-- `gemma2:2b` - Lightweight option (2-3GB RAM)
+### Customization
 
-📖 **[Complete Ollama Setup Guide](./OLLAMA_SETUP.md)**
+To adjust limits for your use case, edit `app/middleware/rate_limiter.py`:
 
-#### ☁️ Google Gemini (Paid API)
-```env
-# .env
-USE_PAID_LLM=true
-GOOGLE_API_KEY=your-api-key
+```python
+rate_limiter = RateLimiter(
+    requests_per_ip_per_day=20,      # Increase IP limit
+    requests_per_session_per_day=30,  # Increase session limit
+    global_requests_per_day=100       # Increase global limit
+)
 ```
 
-**Features:**
-- Gemini 2.5 Flash model
-- Streaming responses
-- Fast and cost-effective
-- High-quality responses
+---
 
-#### 🤖 OpenAI GPT (Paid API)
-```env
-# .env
-USE_PAID_LLM=true
-OPENAI_API_KEY=sk-...
+## 🧪 Testing
+
+### Run Tests
+
+```bash
+# Run all tests
+poetry run pytest
+
+# With coverage
+poetry run pytest --cov=app --cov-report=html
+
+# Specific test file
+poetry run pytest tests/test_decoder.py -v
 ```
 
-**Features:**
-- GPT-4 Turbo model
-- Function calling support
-- Premium quality responses
+### Test Structure
 
-#### 🧪 Mock Provider (Testing)
-```env
-# .env
-USE_PAID_LLM=true
-# Don't set any API keys
+```
+tests/
+├── test_decoder.py       # JWT decoding tests
+├── test_generator.py     # JWT generation tests
+├── test_rate_limiter.py  # Rate limiting tests
+└── test_api.py           # API endpoint tests
 ```
 
-**Use Cases:**
-- Development without API costs
-- Testing
-- Demo purposes
+---
 
-### Learning from User Interactions
+## 🚢 Deployment
 
-**Important**: Ollama models do NOT automatically train during runtime.
+### Render.com
 
-However, you can enable **RAG-based learning** to store Q&A pairs:
+1. **Create Web Service**:
+   - Connect your GitHub repository
+   - Select `backend` as root directory
 
-```env
-# Enable RAG for knowledge retrieval
-ENABLE_RAG=true
+2. **Configure Build**:
+   ```bash
+   # Build Command
+   pip install -r requirements.txt
 
-# Enable Q&A storage (learns from interactions)
-ENABLE_QA_LEARNING=true
+   # Start Command
+   gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+   ```
+
+3. **Environment Variables**:
+   ```
+   LLM_PROVIDER=gemini
+   USE_PAID_LLM=true
+   GOOGLE_API_KEY=<your-api-key>
+   ```
+
+### Railway.app
+
+1. **Connect Repository**
+2. **Add Environment Variables**
+3. Railway auto-detects Python and runs:
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port $PORT
+   ```
+
+### Fly.io
+
+```bash
+# Install flyctl
+curl -L https://fly.io/install.sh | sh
+
+# Launch app
+fly launch
+
+# Deploy
+fly deploy
+
+# Set secrets
+fly secrets set GOOGLE_API_KEY=your-key
 ```
 
-This provides a form of "learning" where:
-- Every Q&A pair is stored in the vector database
-- Similar past Q&A pairs are retrieved for future questions
-- The system provides more consistent, context-aware responses
-- No model training required - works with any LLM!
+### Docker Compose
 
-📖 **[Complete Learning & Training Guide](./LEARNING_GUIDE.md)**
+```yaml
+version: '3.8'
 
-### Custom LLM Adapter
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_PROVIDER=gemini
+      - USE_PAID_LLM=true
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    volumes:
+      - ./chroma_db:/app/chroma_db
+    restart: unless-stopped
+```
 
-To add a new LLM provider:
+---
+
+## 🔧 Development
+
+### Code Style
+
+```bash
+# Format code
+poetry run black app/
+
+# Sort imports
+poetry run isort app/
+
+# Lint
+poetry run flake8 app/
+
+# Type checking
+poetry run mypy app/
+```
+
+### Adding a New Endpoint
+
+```python
+# app/api/routes.py
+
+@router.post("/my-endpoint")
+async def my_endpoint(request: Request, data: MySchema):
+    """
+    Endpoint description.
+    """
+    rate_limiter = get_rate_limiter()
+    await rate_limiter.check_rate_limit(request)
+    
+    # Your logic here
+    return {"success": True, "data": result}
+```
+
+### Adding a New LLM Provider
 
 1. Create adapter in `app/llm/`:
 ```python
-# app/llm/custom_adapter.py
-from app.llm.base import BaseLLMAdapter
+# app/llm/my_provider_adapter.py
 
-class CustomLLMAdapter(BaseLLMAdapter):
-    async def generate_response(self, prompt: str, context: str):
-        # Your implementation
+from app.llm.base import LLMProvider
+
+class MyProviderAdapter(LLMProvider):
+    async def generate_response(self, prompt: str, context: dict) -> str:
+        # Implementation
         pass
     
-    async def generate_streaming_response(self, prompt: str, context: str):
+    async def generate_response_stream(self, prompt: str, context: dict):
         # Streaming implementation
         pass
 ```
@@ -485,224 +616,165 @@ class CustomLLMAdapter(BaseLLMAdapter):
 2. Register in factory:
 ```python
 # app/llm/factory.py
-from app.llm.custom_adapter import CustomLLMAdapter
 
-def get_llm_adapter():
-    if settings.llm_provider == "custom":
-        return CustomLLMAdapter()
+from app.llm.my_provider_adapter import MyProviderAdapter
+
+class LLMFactory:
+    @staticmethod
+    def get_provider() -> LLMProvider:
+        if settings.LLM_PROVIDER == "myprovider":
+            return MyProviderAdapter(api_key=settings.MY_PROVIDER_KEY)
+        # ...
 ```
 
-## 🗄️ Vector Database
+---
 
-### ChromaDB Configuration
+## 📊 Monitoring & Logging
 
-The vector database stores JWT documentation for RAG:
+### Application Logs
 
 ```python
-# Default configuration
-CHROMA_PERSIST_DIR=./chroma_db
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-COLLECTION_NAME=jwt_knowledge
+import logging
+
+logger = logging.getLogger(__name__)
+logger.info("Processing request")
+logger.error("Error occurred", exc_info=True)
 ```
 
-### Adding Documents
-
-```python
-from app.vector.chroma_adapter import ChromaAdapter
-
-vector_db = ChromaAdapter()
-
-# Add documents
-vector_db.add_documents(
-    texts=["JWT is a compact token format..."],
-    metadatas=[{"source": "docs", "topic": "jwt"}]
-)
-
-# Query
-results = vector_db.query("What is JWT?", top_k=5)
-```
-
-### Initializing Knowledge Base
+### Metrics Endpoints
 
 ```bash
-# Run initialization script (if provided)
-poetry run python scripts/init_vectordb.py
+# Health check with metrics
+GET /health
+
+# Rate limiter statistics
+GET /api/v1/rate-limit/stats
+
+# Active sessions count
+GET /api/v1/sessions/info
 ```
 
-## 🧪 Testing
+### Production Monitoring
 
-### Run All Tests
+**Recommended Tools:**
+- **Sentry**: Error tracking
+- **DataDog**: APM & logging
+- **Prometheus**: Metrics collection
+- **Grafana**: Visualization
 
-```bash
-poetry run pytest
-```
+---
 
-### Run Specific Tests
-
-```bash
-# Test JWT operations
-poetry run pytest tests/test_jwt.py
-
-# Test API endpoints
-poetry run pytest tests/test_api.py
-
-# Test with coverage
-poetry run pytest --cov=app tests/
-```
-
-### Test Coverage
-
-```bash
-poetry run pytest --cov=app --cov-report=html
-# Open htmlcov/index.html
-```
-
-## 🚢 Deployment
-
-### Docker Deployment
-
-**Dockerfile:**
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install Poetry
-RUN pip install poetry
-
-# Copy dependency files
-COPY pyproject.toml poetry.lock ./
-
-# Install dependencies
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-dev --no-interaction --no-ansi
-
-# Copy application
-COPY app/ ./app/
-
-# Expose port
-EXPOSE 8000
-
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-**Build and Run:**
-```bash
-docker build -t jwt-backend .
-docker run -p 8000:8000 --env-file .env jwt-backend
-```
-
-### Railway / Render Deployment
-
-1. Connect your repository
-2. Set environment variables
-3. Set build command: `poetry install --no-dev`
-4. Set start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-
-### AWS EC2 / DigitalOcean
-
-```bash
-# Install dependencies
-sudo apt update
-sudo apt install python3.11 python3-pip
-
-# Install Poetry
-curl -sSL https://install.python-poetry.org | python3 -
-
-# Clone and setup
-git clone your-repo
-cd backend
-poetry install --no-dev
-
-# Run with systemd
-sudo systemctl start jwt-backend
-```
-
-### Environment Variables in Production
-
-```bash
-# Required
-export LLM_PROVIDER=openai
-export OPENAI_API_KEY=your-key
-
-# Recommended
-export LOG_LEVEL=warning
-export RELOAD=false
-export WORKERS=4
-```
-
-## 🔧 Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-#### WebSocket Connection Failed
-```
-Error: WebSocket connection failed (1006)
-```
-**Solution:** Ensure backend is running and CORS is properly configured.
+#### Issue: `ModuleNotFoundError: No module named 'app'`
 
-#### Vector DB Initialization Error
-```
-Error: Cannot initialize ChromaDB
-```
-**Solution:** Delete `chroma_db` folder and restart.
-
-#### LLM API Key Error
-```
-Error: Invalid API key
-```
-**Solution:** Check `.env` file and ensure API key is valid.
-
-#### Import Errors
-```
-ModuleNotFoundError: No module named 'app'
-```
-**Solution:** Ensure you're in the correct directory and virtual environment is activated.
-
-### Debug Mode
-
+**Solution:**
 ```bash
-# Enable debug logging
-export LOG_LEVEL=debug
-poetry run uvicorn app.main:app --reload --log-level debug
+# Ensure you're in backend directory
+cd backend
+
+# Reinstall dependencies
+poetry install
 ```
 
-### Performance Issues
+#### Issue: Ollama connection failed
 
-1. **Slow Response Times**
-   - Increase worker count
-   - Use Redis for caching
-   - Optimize vector database queries
+**Solution:**
+```bash
+# Check if Ollama is running
+ollama list
 
-2. **High Memory Usage**
-   - Reduce embedding model size
-   - Clear ChromaDB cache
-   - Limit concurrent WebSocket connections
+# Start Ollama service
+ollama serve
+
+# Verify model is downloaded
+ollama pull phi3:3.8b
+```
+
+#### Issue: Rate limit errors in development
+
+**Solution:**
+```python
+# Temporarily disable rate limiting in development
+# app/middleware/rate_limiter.py
+
+rate_limiter = RateLimiter(
+    requests_per_ip_per_day=1000,  # High limit for dev
+    # ...
+)
+```
+
+#### Issue: CORS errors
+
+**Solution:**
+```python
+# .env
+BACKEND_CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
+
+# Or allow all (development only)
+BACKEND_CORS_ORIGINS=*
+```
+
+---
 
 ## 📚 Additional Resources
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [PyJWT Documentation](https://pyjwt.readthedocs.io/)
+- [Pydantic Models](https://docs.pydantic.dev/)
+- [JWT.io](https://jwt.io/) - JWT Debugger
+- [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519) - JWT Specification
 - [LangChain Documentation](https://python.langchain.com/)
 - [ChromaDB Documentation](https://docs.trychroma.com/)
 
+---
+
 ## 🤝 Contributing
 
-See main [README.md](../README.md) for contribution guidelines.
+We welcome contributions! Please see the main [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 
-## 📄 License
+### Quick Contribution Guide
 
-MIT License - see [LICENSE](../LICENSE) file.
-
-## 📧 Support
-
-For issues specific to the backend:
-1. Check the [Troubleshooting](#troubleshooting) section
-2. Review API documentation at `/docs`
-3. Open an issue on GitHub
-4. Email: dhanush.atwork@gmail.com
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes
+4. Add tests
+5. Run linters: `poetry run black app/ && poetry run flake8 app/`
+6. Commit: `git commit -m 'Add amazing feature'`
+7. Push: `git push origin feature/amazing-feature`
+8. Open a Pull Request
 
 ---
 
-Made with ⚡ FastAPI and ❤️ Python
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+
+---
+
+## 📧 Support
+
+- **Email**: dhanush.atwork@gmail.com
+- **GitHub Issues**: [Report a bug](https://github.com/yourusername/jwt-visualiser/issues)
+- **Documentation**: [Full Docs](https://docs.yourproject.com)
+
+---
+
+## 🙏 Acknowledgments
+
+- **FastAPI** team for the excellent framework
+- **JWT.io** for inspiration
+- **Ollama** for making local LLMs accessible
+- **ChromaDB** for vector database capabilities
+- **LangChain** for LLM orchestration
+
+---
+
+<div align="center">
+
+**Built with ❤️ using FastAPI, Python, and AI**
+
+[⬆ Back to Top](#-jwt-visualiser-backend)
+
+</div>

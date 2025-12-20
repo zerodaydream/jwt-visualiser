@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Tinos } from "next/font/google";
 import "./globals.css";
 import { SessionPanel } from "@/components/layout/SessionPanel";
 import { JwtTokenBar } from "@/components/layout/JwtTokenBar";
+import { RateLimitIndicator } from "@/components/features/RateLimitIndicator";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
@@ -36,6 +37,9 @@ export default function RootLayout({
                 {children}
             </div>
         </main>
+
+        {/* Rate Limit Indicator - Fixed Bottom Right */}
+        <RateLimitIndicator />
       </body>
     </html>
   );
