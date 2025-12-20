@@ -37,20 +37,46 @@ export const useJwtStore = create<JwtState>()(
             return;
         }
 
-        // 3. Base64 Encoding Check (Header & Payload)
-        try {
-            atob(parts[0]);
-            atob(parts[1]);
-        } catch (e) {
-             set({ 
+        // 3. Base64URL Encoding Check (Header & Payload)
+        const isValidBase64Url = (str: string): boolean => {
+            try {
+                // Convert Base64URL to Base64
+                let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+                // Add padding if necessary
+                while (base64.length % 4 !== 0) {
+                    base64 += '=';
+                }
+                // Try to decode
+                const decoded = atob(base64);
+                // Try to parse as JSON for header and payload
+                JSON.parse(decoded);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        };
+
+        // Check if header and payload are valid
+        if (!isValidBase64Url(parts[0]) || !isValidBase64Url(parts[1])) {
+            set({ 
                 rawToken: token, 
                 isValidStructure: false, 
-                validationError: "Invalid Encoding: Header or Payload is not valid Base64Url."
+                validationError: "Invalid Encoding: Header or Payload is not valid Base64URL or not valid JSON."
             });
             return;
         }
 
-        // 4. Valid
+        // 4. Check if signature part exists and is not empty
+        if (!parts[2] || parts[2].length === 0) {
+            set({ 
+                rawToken: token, 
+                isValidStructure: false, 
+                validationError: "Invalid Signature: Signature part is missing or empty."
+            });
+            return;
+        }
+
+        // 5. Valid
         set({ 
             rawToken: token, 
             isValidStructure: true, 

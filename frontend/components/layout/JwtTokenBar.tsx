@@ -3,7 +3,7 @@ import { useJwtStore } from '@/store/jwtStore';
 import { XCircle, CheckCircle, AlertCircle, Eraser, Copy, Check, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRef, useState } from 'react';
-import { apiRequest } from '@/lib/api';
+import { apiRequest } from '@/utils/api';
 
 export function JwtTokenBar() {
   const { rawToken, setToken, isValidStructure, validationError } = useJwtStore();
@@ -49,6 +49,7 @@ export function JwtTokenBar() {
           expires_in_minutes: 60
         })
       });
+
       if (data.success && data.token) {
         setToken(data.token);
       }
@@ -74,10 +75,10 @@ export function JwtTokenBar() {
                     : 'border-claude-border focus-within:border-claude-subtext'
         }`}>
           
-          {/* Overlay for coloring */}
+          {/* Overlay for coloring - syncs with textarea scroll */}
           <div 
             ref={overlayRef}
-            className="absolute inset-0 p-4 font-mono text-sm break-all pointer-events-none whitespace-pre-wrap leading-relaxed z-0 overflow-hidden" 
+            className="absolute inset-0 p-4 pr-24 font-mono text-sm break-all pointer-events-none whitespace-pre-wrap leading-relaxed z-0 overflow-hidden" 
             aria-hidden="true"
           >
             {parts[0] ? <span className="text-jwt-header opacity-100">{parts[0]}</span> : <span className="text-gray-600 opacity-40">eyJ... (Header)</span>}
@@ -87,56 +88,21 @@ export function JwtTokenBar() {
             {parts[2] && <span className="text-jwt-signature opacity-100">{parts[2]}</span>}
           </div>
 
-          {/* Actual Input */}
+          {/* Actual Input - with vertical scroll */}
           <textarea 
             ref={textareaRef}
             value={rawToken}
             onChange={(e) => setToken(e.target.value.replace(/\s/g, ''))}
             onPaste={handlePaste}
             onScroll={handleScroll}
-            className="w-full bg-transparent text-transparent caret-claude-text p-4 font-mono text-sm resize-none focus:outline-none min-h-[80px] leading-relaxed relative z-10"
             placeholder="Paste your JWT token here..."
+            className="w-full bg-transparent text-transparent caret-claude-text p-4 pr-24 font-mono text-sm resize-none focus:outline-none min-h-[80px] max-h-[120px] leading-relaxed relative z-10 overflow-y-auto scrollbar-thin scrollbar-thumb-claude-border scrollbar-track-transparent"
             spellCheck={false}
           />
           
-          {/* ACTION BUTTONS (Absolute Top Right) */}
-          <div className="absolute top-3 right-3 z-20 flex gap-2">
+          {/* STATUS ICONS (Absolute Top Right) */}
+          <div className="absolute top-3 right-3 z-20 flex gap-1.5">
             
-            {/* Generate Sample Button */}
-            {!rawToken && (
-              <button 
-                onClick={handleGenerateSample}
-                disabled={generating}
-                className="px-3 py-1.5 bg-claude-accent/10 text-claude-accent rounded-md hover:bg-claude-accent/20 transition-colors flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
-                title="Generate Sample Token"
-              >
-                <Sparkles size={12} />
-                {generating ? 'Generating...' : 'Try Sample'}
-              </button>
-            )}
-
-            {/* Copy Button */}
-            {rawToken && (
-              <button 
-                onClick={handleCopy}
-                className="p-1.5 bg-claude-surface text-claude-subtext rounded-md hover:text-white hover:bg-claude-accent/20 transition-colors"
-                title="Copy Token"
-              >
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-              </button>
-            )}
-            
-            {/* Clear Button */}
-            {rawToken && (
-              <button 
-                onClick={() => setToken('')}
-                className="p-1.5 bg-claude-surface text-claude-subtext rounded-md hover:text-white hover:bg-red-900/30 transition-colors"
-                title="Clear Token"
-              >
-                <Eraser size={14} />
-              </button>
-            )}
-
             {/* Validation Icon */}
             {rawToken && (
               <div className={`p-1.5 rounded-md flex items-center justify-center transition-colors ${
@@ -146,6 +112,36 @@ export function JwtTokenBar() {
               </div>
             )}
           </div>
+
+          {/* SMALL ACTION BUTTONS (Bottom Right) */}
+          {rawToken && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="absolute bottom-2 right-2 z-20 flex gap-1"
+            >
+              <button
+                onClick={handleCopy}
+                className="p-1.5 bg-claude-surface hover:bg-claude-bg border border-claude-border rounded-md transition-all group/btn shadow-sm hover:shadow"
+                title="Copy Token"
+              >
+                {copied ? (
+                  <Check size={12} className="text-green-500" />
+                ) : (
+                  <Copy size={12} className="text-claude-subtext group-hover/btn:text-claude-text group-hover/btn:scale-110 transition-transform" />
+                )}
+              </button>
+
+              <button
+                onClick={() => setToken('')}
+                className="p-1.5 bg-claude-surface hover:bg-red-900/20 border border-claude-border hover:border-red-900/30 rounded-md transition-all group/btn shadow-sm hover:shadow"
+                title="Clear Token"
+              >
+                <Eraser size={12} className="text-claude-subtext group-hover/btn:text-red-400 group-hover/btn:scale-110 transition-transform" />
+              </button>
+            </motion.div>
+          )}
 
         </div>
 
@@ -165,6 +161,19 @@ export function JwtTokenBar() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* GENERATE SAMPLE TOKEN BUTTON */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleGenerateSample}
+            disabled={generating}
+            className="text-xs px-3 py-2 bg-claude-surface hover:bg-claude-input border border-claude-border rounded-lg text-claude-subtext hover:text-claude-text transition-all flex items-center gap-2 group/sample disabled:opacity-50 shadow-sm hover:shadow"
+            title="Generate a sample JWT token for testing"
+          >
+            <Sparkles size={13} className={`group-hover/sample:text-claude-accent transition-colors ${generating ? 'animate-spin' : ''}`} />
+            <span className="font-medium">Generate Sample Token</span>
+          </button>
+        </div>
 
       </div>
     </div>

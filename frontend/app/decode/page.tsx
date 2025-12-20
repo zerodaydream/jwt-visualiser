@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import ClaudeText from '@/components/features/ClaudeText';
 import SampleTokenHero from '@/components/features/SampleTokenHero'; // Make sure this path matches where you saved it
 import { ShieldAlert } from 'lucide-react';
-import { apiRequest } from '@/lib/api';
+import { apiRequest } from '@/utils/api';
 
 export default function DecodePage() {
   const { rawToken, isValidStructure } = useJwtStore();
@@ -30,7 +30,6 @@ export default function DecodePage() {
             body: JSON.stringify({ token: rawToken })
         });
         
-
         if (!json.success) throw new Error(json.error || 'Invalid Token');
         
         setData(json);
@@ -43,8 +42,8 @@ export default function DecodePage() {
       }
     };
     
-    // Debounce/Delay slightly for UX smoothing
-    const timer = setTimeout(fetchData, 600);
+    // Minimal debounce to avoid rapid-fire requests
+    const timer = setTimeout(fetchData, 50);
     return () => clearTimeout(timer);
   }, [rawToken, isValidStructure]);
 
@@ -126,7 +125,7 @@ export default function DecodePage() {
             </section>
 
             {/* 3. Signature (Static/Simple) */}
-            <section className="opacity-60 hover:opacity-100 transition-opacity">
+            <section>
                 <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs font-mono text-jwt-signature border border-jwt-signature px-2 py-0.5 rounded-full">SIGNATURE</span>
                 </div>
