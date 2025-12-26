@@ -102,10 +102,13 @@ backend/
 │
 ├── chroma_db/                     # Vector database storage (gitignored)
 ├── scripts/
-│   └── setup_ollama.py            # Ollama installation helper
+│   ├── setup_ollama.py            # Ollama installation helper
+│   ├── ingest_jwt_knowledge.py    # JWT knowledge ingestion script
+│   └── manage_qa_history.py       # Q&A history management
 ├── pyproject.toml                 # Poetry dependencies
 ├── requirements.txt               # Pip dependencies (generated)
 ├── .env.example                   # Environment variables template
+├── KNOWLEDGE_BASE_GUIDE.md        # Detailed RAG documentation
 └── README.md                      # This file
 ```
 
@@ -231,10 +234,10 @@ OLLAMA_NUM_CTX=2048
 VECTOR_DB_PATH=./chroma_db
 
 # Enable RAG (Retrieval-Augmented Generation)
-ENABLE_RAG=false
+ENABLE_RAG=true
 
 # Store Q&A pairs for learning
-ENABLE_QA_LEARNING=false
+ENABLE_QA_LEARNING=true
 
 # ===================================
 # CORS CONFIGURATION
@@ -302,6 +305,267 @@ docker build -t jwt-visualiser-backend .
 # Run container
 docker run -p 8000:8000 --env-file .env jwt-visualiser-backend
 ```
+
+---
+
+## 📚 Knowledge Base & RAG System
+
+### Overview
+
+The backend includes a production-ready **RAG (Retrieval-Augmented Generation)** system that ingests JWT documentation from authoritative sources and provides accurate, source-attributed responses.
+
+### Features
+
+- **Web Scraping**: Automatically fetches JWT specs from RFCs, OWASP, JWT.io
+- **Source Tracking**: Every answer includes exact URLs and content previews
+- **Smart Chunking**: Intelligently splits documents while preserving context
+- **Deduplication**: Prevents repeated sources in responses
+- **Q&A Learning**: Stores successful interactions for future reference
+- **Confidence Scores**: Color-coded relevance indicators (High/Medium/Low)
+
+### Ingestion Setup
+
+#### 1. Enable RAG in .env
+
+```bash
+ENABLE_RAG=true
+ENABLE_QA_LEARNING=true
+VECTOR_DB_PATH=./chroma_db
+```
+
+#### 2. Install Dependencies
+
+```bash
+# Using Poetry
+poetry install
+
+# The following packages will be installed:
+# - chromadb: Vector database
+# - sentence-transformers: Local embeddings (no API costs)
+# - beautifulsoup4: Web scraping
+# - lxml: HTML/XML parsing
+```
+
+#### 3. Run Initial Ingestion
+
+```bash
+# Ingest JWT documentation from all default sources
+poetry run python scripts/ingest_jwt_knowledge.py
+
+# Expected output:
+# ✅ Scraped 40 documents from 7 authoritative sources
+# ✅ Created 1,304 chunks
+# ✅ Success Rate: 100%
+# ⏱️  Duration: ~2-5 minutes
+```
+
+#### 4. Add Custom Sources (Optional)
+
+```bash
+# Ingest additional URLs
+poetry run python scripts/ingest_jwt_knowledge.py --custom-urls https://example.com/jwt-guide
+
+# Dry run to check configuration
+poetry run python scripts/ingest_jwt_knowledge.py --dry-run
+```
+
+### Default Sources
+
+The system automatically ingests from:
+
+| Source | Type | Priority | URL |
+|--------|------|----------|-----|
+| **RFC 7519** | Specification | Critical | [IETF](https://datatracker.ietf.org/doc/html/rfc7519) |
+| **RFC 7515** | Specification | Critical | [JWS Spec](https://datatracker.ietf.org/doc/html/rfc7515) |
+| **RFC 7516** | Specification | Critical | [JWE Spec](https://datatracker.ietf.org/doc/html/rfc7516) |
+| **RFC 7517** | Specification | Critical | [JWK Spec](https://datatracker.ietf.org/doc/html/rfc7517) |
+| **RFC 7518** | Specification | Critical | [JWA Spec](https://datatracker.ietf.org/doc/html/rfc7518) |
+| **JWT.io** | Documentation | High | [Introduction](https://jwt.io/introduction) |
+| **OWASP** | Security | High | [Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html) |
+
+### Q&A History Management
+
+#### View Statistics
+
+```bash
+# Check how many Q&A pairs are stored
+poetry run python scripts/manage_qa_history.py --status
+
+# Output:
+# 📊 Q&A Collection Status:
+#    Total Q&A Pairs: 42
+#    Can Reference Past Answers: True
+```
+
+#### Clear Q&A History
+
+```bash
+# Delete all stored Q&A pairs
+poetry run python scripts/manage_qa_history.py --clear
+
+# Confirmation required:
+# ⚠️  WARNING: This will delete ALL Q&A pairs!
+# Type 'yes' to confirm: yes
+# ✅ Successfully deleted jwt_qa_history collection
+```
+
+#### List Recent Q&A Pairs
+
+```bash
+# View last 10 Q&A pairs
+poetry run python scripts/manage_qa_history.py --list
+
+# View more pairs
+poetry run python scripts/manage_qa_history.py --list --limit 20
+```
+
+### API Endpoints
+
+#### Search Knowledge Base
+
+```http
+POST /api/v1/knowledge/search
+Content-Type: application/json
+
+{
+  "query": "What is JWT?",
+  "top_k": 5
+}
+```
+
+**Response with Sources:**
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "content": "Full content here...",
+      "content_preview": "...exact snippet showing where info was taken...",
+      "source": {
+        "url": "https://datatracker.ietf.org/doc/html/rfc7519#section-1",
+        "name": "RFC 7519 - JSON Web Token (JWT)",
+        "type": "specification",
+        "section": "Introduction",
+        "section_id": "section-1",
+        "priority": "critical"
+      },
+      "similarity_score": 0.8942
+    }
+  ]
+}
+```
+
+#### Trigger Ingestion
+
+```http
+POST /api/v1/knowledge/ingest
+Content-Type: application/json
+
+{
+  "custom_urls": ["https://example.com/jwt-guide"],
+  "incremental": true
+}
+```
+
+#### Get Knowledge Base Status
+
+```http
+GET /api/v1/knowledge/status
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "statistics": {
+    "vector_database": {
+      "collections": {
+        "jwt_knowledge": {"count": 1304},
+        "jwt_qa_history": {"count": 42}
+      }
+    },
+    "rag_enabled": true,
+    "qa_learning_enabled": true
+  }
+}
+```
+
+### Source Attribution in Responses
+
+When RAG is enabled, all AI responses include:
+
+1. **Numbered Source Cards** with:
+   - Source name and type
+   - Exact section and URL
+   - Confidence score (High/Medium/Low)
+   - Content preview showing exact text
+
+2. **Click-to-Expand**:
+   - Click any source to see full chunk content
+   - Scrollable for long passages
+   - Chevron indicators for expand/collapse
+
+3. **Confidence Scoring**:
+   - 🟢 **High** (0.70-1.00): Highly relevant
+   - 🟡 **Medium** (0.40-0.69): Moderately relevant
+   - 🟠 **Low** (0.00-0.39): Somewhat relevant
+   - Poor matches (<0) automatically filtered
+
+### Performance
+
+- **Ingestion**: 2-5 minutes for default sources
+- **Query Time**: <100ms for vector search
+- **Storage**: ~50MB for 1,300 chunks with embeddings
+- **Memory**: ~200MB at runtime (local embeddings)
+- **No API Costs**: All embeddings run locally
+
+### Troubleshooting
+
+#### ChromaDB Telemetry Warnings
+
+If you see telemetry warnings, they're harmless but can be disabled:
+
+```python
+# Already configured in app/vector/chroma_adapter.py
+settings=ChromaSettings(
+    anonymized_telemetry=False  # Disables telemetry
+)
+```
+
+Restart the server for changes to take effect.
+
+#### Low Relevance Scores
+
+If sources seem irrelevant:
+1. Check if ingestion completed successfully
+2. Verify `ENABLE_RAG=true` in `.env`
+3. Re-run ingestion to refresh data
+4. Clear Q&A history if it contains outdated info
+
+#### Missing Sources
+
+```bash
+# Verify vector database has data
+poetry run python scripts/manage_qa_history.py --status
+
+# Re-ingest if needed
+poetry run python scripts/ingest_jwt_knowledge.py
+```
+
+### Advanced Configuration
+
+```python
+# app/vector/ingestion_service.py
+
+JWTIngestionService(
+    chunk_size=1000,        # Adjust for longer/shorter chunks
+    chunk_overlap=200,      # Context preservation
+    batch_size=50,          # Processing batch size
+    max_retries=3           # Retry failed operations
+)
+```
+
+For detailed documentation, see [KNOWLEDGE_BASE_GUIDE.md](./KNOWLEDGE_BASE_GUIDE.md).
 
 ---
 

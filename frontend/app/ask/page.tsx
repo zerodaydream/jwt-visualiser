@@ -4,7 +4,7 @@ import { useJwtStore } from '@/store/jwtStore';
 import { useChatStore } from '@/store/chatStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
-import { Send, Bot, BookOpen, ShieldCheck, Clock, FileJson, Lock, Sparkles, AlertTriangle, Fingerprint, Trash2, AlertCircle } from 'lucide-react';
+import { Send, Bot, BookOpen, ShieldCheck, Clock, FileJson, Lock, Sparkles, AlertTriangle, Fingerprint, Trash2, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { API_URL, warmupBackend } from '@/utils/api';
 
 // --- ANIMATION COMPONENTS ---
@@ -194,6 +194,7 @@ export default function AskPage() {
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [authStatus, setAuthStatus] = useState<'idle' | 'validating' | 'validated' | 'failed'>('idle');
   const [tokenCount, setTokenCount] = useState(0);
+  const [expandedSources, setExpandedSources] = useState<{[key: string]: boolean}>({});
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Character buffer for true character-by-character typing effect
@@ -308,7 +309,7 @@ export default function AskPage() {
               addMessage({
                 role: 'assistant',
                 content: message.full_response,
-                sources: message.context_used
+                sources: message.sources || message.context_used || []  // Support both new and legacy format
               });
               setAuthStatus('idle');
               break;
@@ -757,14 +758,142 @@ Try asking:
                ) : (
                  <div className="text-sm text-claude-text font-sans">{msg.content}</div>
                )}
-               {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
-                 <div className="mt-4 pt-3 border-t border-claude-border/50">
-                    <div className="flex items-center gap-2 text-[10px] text-claude-subtext mb-2 font-mono uppercase tracking-wider font-bold">
-                        <BookOpen size={10} /> <span>Context</span>
-                    </div>
-                    {msg.sources.map((s, i) => <div key={i} className="text-xs text-claude-subtext/70 bg-claude-bg p-2 rounded truncate">{s.slice(0, 80)}...</div>)}
-                 </div>
-               )}
+              {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-claude-border/50">
+                   <div className="flex items-center gap-2 text-[10px] text-claude-subtext mb-3 font-mono uppercase tracking-wider font-bold">
+                       <BookOpen size={10} /> <span>Sources Referenced</span>
+                   </div>
+                   <div className="space-y-2">
+                     {msg.sources.map((source: any, i: number) => {
+                       const sourceKey = `msg-${msg.content.slice(0, 20)}-source-${i}`;
+                       const isExpanded = expandedSources[sourceKey];
+                       
+                       return (
+                         <div 
+                           key={i} 
+                           className="bg-claude-bg border border-claude-border/50 rounded-lg overflow-hidden hover:border-claude-accent/30 transition-colors"
+                         >
+                           {/* Source Header - Clickable */}
+                           <div 
+                             className="p-3 cursor-pointer hover:bg-claude-surface/30 transition-colors"
+                             onClick={() => setExpandedSources(prev => ({...prev, [sourceKey]: !prev[sourceKey]}))}
+                           >
+                             <div className="flex items-start gap-2">
+                               <div className="flex-shrink-0 w-5 h-5 rounded-full bg-claude-accent/10 flex items-center justify-center text-[10px] font-bold text-claude-accent">
+                                 {i + 1}
+                               </div>
+                               <div className="flex-1 min-w-0">
+                                 <div className="font-semibold text-claude-text text-xs mb-1">{source.source?.name || 'Unknown Source'}</div>
+                                 {source.source?.section && (
+                                   <div className="text-[10px] text-claude-subtext/70 mb-1">
+                                     📍 {source.source.section}
+                                   </div>
+                                 )}
+                                 {source.source?.url && (
+                                   <a 
+                                     href={source.source.url} 
+                                     target="_blank" 
+                                     rel="noopener noreferrer"
+                                     className="text-[10px] text-claude-accent hover:underline break-all block"
+                                     onClick={(e) => e.stopPropagation()}
+                                   >
+                                     🔗 {source.source.url}
+                                   </a>
+                                 )}
+                               </div>
+                               <div className="flex items-center gap-2 flex-shrink-0">
+                                 {source.similarity_score !== undefined && (
+                                   <div className="flex-shrink-0">
+                                     {(() => {
+                                       const score = source.similarity_score;
+                                       let label = '';
+                                       let colorClass = '';
+                                       
+                                       if (score >= 0.7) {
+                                         label = 'High';
+                                         colorClass = 'text-green-400 bg-green-400/10';
+                                       } else if (score >= 0.4) {
+                                         label = 'Medium';
+                                         colorClass = 'text-yellow-400 bg-yellow-400/10';
+                                       } else if (score >= 0) {
+                                         label = 'Low';
+                                         colorClass = 'text-orange-400 bg-orange-400/10';
+                                       } else {
+                                         label = 'Poor';
+                                         colorClass = 'text-red-400 bg-red-400/10';
+                                       }
+                                       
+                                       return (
+                                         <div className={`px-2 py-1 rounded text-[10px] font-mono font-semibold ${colorClass}`}>
+                                           {label} ({score.toFixed(2)})
+                                         </div>
+                                       );
+                                     })()}
+                                   </div>
+                                 )}
+                                 <div className="text-claude-subtext/50">
+                                   {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                 </div>
+                               </div>
+                             </div>
+                           </div>
+                           
+                           {/* Content Preview or Full Content */}
+                           <AnimatePresence>
+                             {source.content_preview && (
+                               <motion.div
+                                 initial={false}
+                                 animate={{ height: isExpanded ? 'auto' : 'auto' }}
+                                 className="overflow-hidden"
+                               >
+                                 <div className="px-3 pb-3">
+                                   {isExpanded && source.content ? (
+                                     // Full content with markdown support
+                                     <div className="text-[11px] text-claude-text leading-relaxed bg-claude-surface/50 rounded p-3 border-l-2 border-claude-accent/30 max-h-96 overflow-y-auto">
+                                       <div className="text-[10px] text-claude-accent mb-2 font-semibold">Full Content:</div>
+                                       <div className="markdown-content prose prose-sm prose-invert max-w-none">
+                                         <ReactMarkdown
+                                           components={{
+                                             p: ({children}) => <p className="mb-2 text-[11px] leading-relaxed">{children}</p>,
+                                             strong: ({children}) => <strong className="text-white font-semibold">{children}</strong>,
+                                             em: ({children}) => <em className="text-claude-subtext italic">{children}</em>,
+                                             code: ({children}) => <code className="text-[10px] text-claude-accent bg-claude-bg px-1.5 py-0.5 rounded font-mono">{children}</code>,
+                                             pre: ({children}) => <pre className="text-[10px] bg-claude-bg border border-claude-border rounded p-2 overflow-x-auto font-mono mb-2">{children}</pre>,
+                                             ul: ({children}) => <ul className="list-disc ml-4 mb-2 space-y-1 text-[11px]">{children}</ul>,
+                                             ol: ({children}) => <ol className="list-decimal ml-4 mb-2 space-y-1 text-[11px]">{children}</ol>,
+                                             li: ({children}) => <li className="text-[11px]">{children}</li>,
+                                             a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-claude-accent underline hover:text-claude-accent/80">{children}</a>,
+                                             blockquote: ({children}) => <blockquote className="border-l-2 border-claude-accent pl-3 italic text-claude-subtext mb-2 text-[11px]">{children}</blockquote>,
+                                             h1: ({children}) => <h1 className="text-sm font-semibold text-claude-text mb-2 mt-3">{children}</h1>,
+                                             h2: ({children}) => <h2 className="text-xs font-semibold text-claude-text mb-2 mt-2">{children}</h2>,
+                                             h3: ({children}) => <h3 className="text-xs font-medium text-claude-text mb-1 mt-2">{children}</h3>,
+                                           }}
+                                         >
+                                           {source.content}
+                                         </ReactMarkdown>
+                                       </div>
+                                     </div>
+                                   ) : (
+                                     // Preview only
+                                     <div className="text-[11px] text-claude-subtext/80 leading-relaxed bg-claude-surface/50 rounded p-2 italic border-l-2 border-claude-accent/20">
+                                       "{source.content_preview}"
+                                     </div>
+                                   )}
+                                   {source.content && (
+                                     <div className="mt-2 text-[9px] text-claude-subtext/50 text-center">
+                                       {isExpanded ? 'Click to collapse' : 'Click to see full content'}
+                                     </div>
+                                   )}
+                                 </div>
+                               </motion.div>
+                             )}
+                           </AnimatePresence>
+                         </div>
+                       );
+                     })}
+                   </div>
+                </div>
+              )}
             </div>
           </motion.div>
         ))}

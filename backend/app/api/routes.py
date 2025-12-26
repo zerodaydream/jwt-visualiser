@@ -64,11 +64,14 @@ async def decode_token(request: TokenRequest):
 @router.post("/ask", response_model=AskResponse)
 async def ask_jwt_question(request: AskRequest):
     """
-    RAG Endpoint: 
+    Enhanced RAG Endpoint with accurate source tracking:
     1. Decodes the token context.
-    2. Searches Vector DB for relevant JWT specs.
-    3. Sends everything to LLM.
+    2. Searches Vector DB for relevant JWT specs with source attribution.
+    3. Sends everything to LLM with sources.
+    4. Returns answer with detailed source information including content previews.
     """
+    from app.core.config import settings
+    from app.vector.qa_store import QAStore
     
     # 1. Get Token Context (Decode it safely)
     try:
@@ -82,28 +85,103 @@ async def ask_jwt_question(request: AskRequest):
     except Exception:
         token_context = {"error": "Token could not be decoded"}
 
-    # 2. Retrieve Documents (RAG) - only if enabled
-    from app.core.config import settings
+    # 2. Retrieve Documents (RAG) with enhanced source tracking and deduplication
+    relevant_docs_enhanced = []
+    relevant_docs_legacy = []  # For backward compatibility
+    
     if settings.ENABLE_RAG and vector_store.embedding_fn:
-        relevant_docs = vector_store.similarity_search(request.question)
-    else:
-        relevant_docs = []
+        try:
+            # Use enhanced query method from ChromaAdapter - get more results for deduplication
+            import asyncio
+            results = await vector_store.query(
+                query_text=request.question,
+                top_k=settings.TOP_K,
+                collection_name="jwt_knowledge",
+                include_distance=True
+            )
+            
+            # Deduplicate by source URL + section to avoid repeats
+            seen_sources = set()
+            
+            for result in results:
+                source_info = result.get("source", {})
+                similarity = result.get("similarity_score", 0)
+                
+                # Skip poor matches (negative similarity scores)
+                if similarity < 0:
+                    continue
+                
+                source_key = f"{source_info.get('url', '')}#{source_info.get('section_id', '')}"
+                
+                # Skip if we've already seen this exact source section
+                if source_key in seen_sources:
+                    continue
+                
+                # Add to seen set
+                seen_sources.add(source_key)
+                
+                relevant_docs_enhanced.append({
+                    "content": result.get("content", ""),
+                    "content_preview": result.get("content_preview", ""),
+                    "source": source_info,
+                    "similarity_score": result.get("similarity_score", 0)
+                })
+                # Legacy format
+                relevant_docs_legacy.append(result.get("content", ""))
+                
+                # Stop after we have 5 unique sources
+                if len(relevant_docs_enhanced) >= 5:
+                    break
+                
+        except Exception as e:
+            print(f"Error retrieving from vector store: {e}")
+            # Fallback to legacy method
+            relevant_docs_legacy = vector_store.similarity_search(request.question)
+    
+    # 3. Check Q&A learning for similar past questions
+    if settings.ENABLE_QA_LEARNING:
+        try:
+            qa_store = QAStore(vector_adapter=vector_store)
+            similar_qa = await qa_store.retrieve_similar_qa(
+                question=request.question,
+                top_k=settings.TOP_K_QA,
+                min_similarity=0.75
+            )
+            # Add insights from past Q&A to context if found
+            if similar_qa:
+                print(f"Found {len(similar_qa)} similar past Q&A pairs")
+        except Exception as e:
+            print(f"Error retrieving Q&A history: {e}")
 
-    # 3. Call LLM
+    # 4. Call LLM
     llm = LLMFactory.get_provider()
     
     # Combine RAG docs + Token Context + Conversation History
     full_context = {
         "jwt_data": token_context,
-        "knowledge_base": relevant_docs,
+        "knowledge_base": relevant_docs_legacy or [doc["content"] for doc in relevant_docs_enhanced],
         "conversation_history": [msg.dict() for msg in request.history]
     }
     
     answer = await llm.generate_response(request.question, full_context)
     
+    # 5. Store this Q&A pair for learning (if enabled)
+    if settings.ENABLE_QA_LEARNING and relevant_docs_enhanced:
+        try:
+            qa_store = QAStore(vector_adapter=vector_store)
+            await qa_store.store_qa_pair(
+                question=request.question,
+                answer=answer,
+                jwt_context=token_context,
+                sources_used=relevant_docs_enhanced
+            )
+        except Exception as e:
+            print(f"Error storing Q&A pair: {e}")
+    
     return AskResponse(
         answer=answer,
-        context_used=relevant_docs
+        context_used=relevant_docs_legacy,  # Legacy field
+        sources=relevant_docs_enhanced  # New enhanced field with source tracking
     )
 
 @router.post("/ask/stream")
@@ -395,18 +473,73 @@ async def websocket_ask_endpoint(websocket: WebSocket):
                 })
                 continue
             
-            # RAG search
+            # RAG search with enhanced source tracking and deduplication
             from app.core.config import settings
+            relevant_docs_enhanced = []
+            relevant_docs_legacy = []
+            
             if settings.ENABLE_RAG and vector_store.embedding_fn:
-                relevant_docs = vector_store.similarity_search(question)
-                await websocket.send_json({
-                    "type": "rag",
-                    "status": "retrieved",
-                    "doc_count": len(relevant_docs),
-                    "timestamp": datetime.utcnow().isoformat()
-                })
+                try:
+                    # Use enhanced query method - get more results for deduplication
+                    results = await vector_store.query(
+                        query_text=question,
+                        top_k=settings.TOP_K,
+                        collection_name="jwt_knowledge",
+                        include_distance=True
+                    )
+                    
+                    # Deduplicate by source URL + section to avoid repeats
+                    seen_sources = set()
+                    
+                    for result in results:
+                        source_info = result.get("source", {})
+                        similarity = result.get("similarity_score", 0)
+                        
+                        # Skip poor matches (negative similarity scores)
+                        if similarity < 0:
+                            continue
+                        
+                        source_key = f"{source_info.get('url', '')}#{source_info.get('section_id', '')}"
+                        
+                        # Skip if we've already seen this exact source section
+                        if source_key in seen_sources:
+                            continue
+                        
+                        # Add to seen set
+                        seen_sources.add(source_key)
+                        
+                        # Format for response
+                        relevant_docs_enhanced.append({
+                            "content": result.get("content", ""),
+                            "content_preview": result.get("content_preview", ""),
+                            "source": source_info,
+                            "similarity_score": result.get("similarity_score", 0)
+                        })
+                        
+                        # Legacy format for LLM context
+                        relevant_docs_legacy.append(result.get("content", ""))
+                        
+                        # Stop after we have 5 unique sources
+                        if len(relevant_docs_enhanced) >= 5:
+                            break
+                    
+                    await websocket.send_json({
+                        "type": "rag",
+                        "status": "retrieved",
+                        "doc_count": len(relevant_docs_enhanced),
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                except Exception as e:
+                    print(f"Error in enhanced RAG query: {e}")
+                    # Fallback to legacy method
+                    relevant_docs_legacy = vector_store.similarity_search(question)
+                    await websocket.send_json({
+                        "type": "rag",
+                        "status": "retrieved",
+                        "doc_count": len(relevant_docs_legacy),
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
             else:
-                relevant_docs = []
                 await websocket.send_json({
                     "type": "rag",
                     "status": "disabled",
@@ -421,7 +554,7 @@ async def websocket_ask_endpoint(websocket: WebSocket):
             llm = LLMFactory.get_provider()
             full_context = {
                 "jwt_data": token_context,
-                "knowledge_base": relevant_docs,
+                "knowledge_base": relevant_docs_legacy or [doc["content"] for doc in relevant_docs_enhanced],
                 "session_id": session_id
             }
             
@@ -460,12 +593,27 @@ async def websocket_ask_endpoint(websocket: WebSocket):
                 # Add AI response to session memory
                 session.add_ai_message(full_response)
                 
-                # Send completion message
+                # Store Q&A pair for learning if enabled
+                if settings.ENABLE_QA_LEARNING and relevant_docs_enhanced:
+                    try:
+                        from app.vector.qa_store import QAStore
+                        qa_store = QAStore(vector_adapter=vector_store)
+                        await qa_store.store_qa_pair(
+                            question=question,
+                            answer=full_response,
+                            jwt_context=token_context,
+                            sources_used=relevant_docs_enhanced
+                        )
+                    except Exception as e:
+                        print(f"Error storing Q&A pair: {e}")
+                
+                # Send completion message with enhanced sources
                 await websocket.send_json({
                     "type": "complete",
                     "full_response": full_response,
                     "token_count": token_count,
-                    "context_used": relevant_docs,
+                    "context_used": relevant_docs_legacy,  # Legacy field
+                    "sources": relevant_docs_enhanced,  # New enhanced field with previews
                     "session_messages": len(session.get_messages()),
                     "timestamp": datetime.utcnow().isoformat()
                 })

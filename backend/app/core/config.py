@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     VECTOR_DB_PATH: str = "./chroma_db"
     ENABLE_RAG: bool = False  # Set to True to enable RAG with embeddings
     ENABLE_QA_LEARNING: bool = False  # Store Q&A pairs for future retrieval (RAG-based learning)
+    
+    # RAG Query Configuration
+    TOP_K: int = 10  # Number of results to retrieve from vector DB
+    TOP_K_QA: int = 2  # Number of similar Q&A pairs to retrieve for learning
 
     model_config = SettingsConfigDict(
         env_file=".env", 
