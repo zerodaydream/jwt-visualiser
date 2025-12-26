@@ -107,10 +107,6 @@ async def ask_jwt_question(request: AskRequest):
                 source_info = result.get("source", {})
                 similarity = result.get("similarity_score", 0)
                 
-                # Skip poor matches (negative similarity scores)
-                if similarity < 0:
-                    continue
-                
                 source_key = f"{source_info.get('url', '')}#{source_info.get('section_id', '')}"
                 
                 # Skip if we've already seen this exact source section
@@ -495,9 +491,6 @@ async def websocket_ask_endpoint(websocket: WebSocket):
                         source_info = result.get("source", {})
                         similarity = result.get("similarity_score", 0)
                         
-                        # Skip poor matches (negative similarity scores)
-                        if similarity < 0:
-                            continue
                         
                         source_key = f"{source_info.get('url', '')}#{source_info.get('section_id', '')}"
                         

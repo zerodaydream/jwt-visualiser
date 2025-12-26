@@ -802,35 +802,36 @@ Try asking:
                                  )}
                                </div>
                                <div className="flex items-center gap-2 flex-shrink-0">
-                                 {source.similarity_score !== undefined && (
-                                   <div className="flex-shrink-0">
-                                     {(() => {
-                                       const score = source.similarity_score;
-                                       let label = '';
-                                       let colorClass = '';
-                                       
-                                       if (score >= 0.7) {
-                                         label = 'High';
-                                         colorClass = 'text-green-400 bg-green-400/10';
-                                       } else if (score >= 0.4) {
-                                         label = 'Medium';
-                                         colorClass = 'text-yellow-400 bg-yellow-400/10';
-                                       } else if (score >= 0) {
-                                         label = 'Low';
-                                         colorClass = 'text-orange-400 bg-orange-400/10';
-                                       } else {
-                                         label = 'Poor';
-                                         colorClass = 'text-red-400 bg-red-400/10';
-                                       }
-                                       
-                                       return (
-                                         <div className={`px-2 py-1 rounded text-[10px] font-mono font-semibold ${colorClass}`}>
-                                           {label} ({score.toFixed(2)})
-                                         </div>
-                                       );
-                                     })()}
+                           {source.similarity_score !== undefined && (
+                             <div className="flex-shrink-0">
+                               {(() => {
+                                 const score = source.similarity_score;
+                                 // Cosine similarity: 1.0 (best) to -1.0 (worst)
+                                 let label = '';
+                                 let colorClass = '';
+                                 
+                                 if (score >= 0.7) {
+                                   label = 'High';
+                                   colorClass = 'text-green-400 bg-green-400/10';
+                                 } else if (score >= 0.4) {
+                                   label = 'Medium';
+                                   colorClass = 'text-yellow-400 bg-yellow-400/10';
+                                 } else if (score >= 0) {
+                                   label = 'Low';
+                                   colorClass = 'text-orange-400 bg-orange-400/10';
+                                 } else {
+                                   label = 'Poor';
+                                   colorClass = 'text-red-400 bg-red-400/10';
+                                 }
+                                 
+                                 return (
+                                   <div className={`px-2 py-1 rounded text-[10px] font-mono font-semibold ${colorClass}`}>
+                                     {label} ({score.toFixed(2)})
                                    </div>
-                                 )}
+                                 );
+                               })()}
+                             </div>
+                           )}
                                  <div className="text-claude-subtext/50">
                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                  </div>
