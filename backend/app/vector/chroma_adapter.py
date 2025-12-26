@@ -39,11 +39,11 @@ class ChromaAdapter(VectorStoreProvider):
         self.collections = {
             "jwt_knowledge": self.client.get_or_create_collection(
                 name="jwt_knowledge",
-                metadata={"description": "JWT specifications and documentation"}
+                metadata={"hnsw:space": "cosine", "description": "JWT specifications and documentation"}
             ),
             "jwt_qa_history": self.client.get_or_create_collection(
                 name="jwt_qa_history",
-                metadata={"description": "User Q&A pairs for learning"}
+                metadata={"hnsw:space": "cosine", "description": "User Q&A pairs for learning"}
             )
         }
         
@@ -177,8 +177,13 @@ class ChromaAdapter(VectorStoreProvider):
                     metadata = results['metadatas'][0][i] if results['metadatas'] else {}
                     distance = results['distances'][0][i] if results['distances'] else None
                     
-                    # Calculate similarity score (inverse of distance)
-                    similarity_score = 1 - (distance if distance is not None else 1)
+                    # ChromaDB cosine distance ranges from 0 (identical) to 2 (opposite)
+                    # Convert to similarity: similarity = 1 - (distance / 2)
+                    # This gives us a range from 1.0 (best) to -1.0 (worst)
+                    if distance is not None:
+                        similarity_score = 1 - (distance / 2)
+                    else:
+                        similarity_score = 0
                     
                     result = {
                         "content": document,
