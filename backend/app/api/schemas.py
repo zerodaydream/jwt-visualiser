@@ -30,6 +30,22 @@ class ChatMessage(BaseModel):
     role: str # 'user' or 'assistant'
     content: str
 
+class SourceInfo(BaseModel):
+    """Source information with content preview for accurate attribution."""
+    url: str
+    name: str
+    type: str
+    section: str = ""
+    section_id: str = ""
+    priority: str = "medium"
+
+class ContextSource(BaseModel):
+    """Enhanced context with source tracking and previews."""
+    content: str
+    content_preview: str
+    source: SourceInfo
+    similarity_score: float
+
 # --- Ask Request ---
 class AskRequest(BaseModel):
     token: str
@@ -38,7 +54,8 @@ class AskRequest(BaseModel):
 
 class AskResponse(BaseModel):
     answer: str
-    context_used: List[str] # Show the user what docs we found
+    context_used: List[str] = []  # Deprecated: kept for backward compatibility
+    sources: List[ContextSource] = []  # New: Enhanced source information with previews
 
 # --- Generator Request ---
 class GenerateRequest(BaseModel):

@@ -27,8 +27,12 @@ langchain-google-genai = "^0.0.9" # For Gemini support
 langchain-huggingface = "^0.0.1"  # Free local embeddings
 chromadb = "^0.4.24"              # Local vector storage
 tiktoken = "^0.12.0"               # Token counting
-sentence-transformers = "^2.5.0"  # Required for HuggingFace embeddings
+sentence-transformers = "^2.6.0"  # Required for HuggingFace embeddings
 httpx = "^0.27.0"                 # For Ollama API communication
+
+# Web Scraping for Knowledge Ingestion
+beautifulsoup4 = "^4.12.0"        # HTML parsing
+lxml = "^4.9.0"                   # XML/HTML parser
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"

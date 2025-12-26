@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes
+from app.api import knowledge_routes
 from app.core.config import settings
 from app.llm.session_manager import get_session_manager
 from app.middleware.rate_limiter import get_rate_limiter
@@ -102,6 +103,7 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(routes.router, prefix="/api/v1")
+app.include_router(knowledge_routes.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
